@@ -46,7 +46,7 @@ class MessageModel(Base):
     user_message = Column(Text, nullable=False)
     assistant_response = Column(Text, nullable=False)
     language = Column(String(10), nullable=False)
-    metadata = Column(JSON, nullable=True)  # For storing message_sid, call_sid, etc.
+    message_metadata = Column(JSON, nullable=True)  # For storing message_sid, call_sid, etc.
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     
     # Relationships

@@ -86,7 +86,7 @@ class PostgresMessageRepository(MessageRepository):
             user_message=message.user_message,
             assistant_response=message.assistant_response,
             language=message.language,
-            metadata=message.metadata
+            message_metadata=message.metadata
         )
         self.db.add(db_message)
         self.db.commit()
@@ -118,6 +118,6 @@ class PostgresMessageRepository(MessageRepository):
             user_message=db_message.user_message,
             assistant_response=db_message.assistant_response,
             language=db_message.language,
-            metadata=db_message.metadata,
+            metadata=db_message.message_metadata,
             created_at=db_message.created_at
         )

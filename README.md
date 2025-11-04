@@ -57,6 +57,9 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed documentation.
 4. Copy `.env.example` to `.env` and update with your credentials
 5. Run database migrations:
    ```bash
+   #if need update the schema
+   alembic revision --autogenerate -m "Initial schema with message_metadata"
+   #else only
    alembic upgrade head
    ```
 6. Add users to the database:
