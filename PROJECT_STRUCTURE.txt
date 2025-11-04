@@ -1,0 +1,74 @@
+dp-base-api/
+├── README.md                          # Main documentation
+├── .env.example                       # Environment variables template
+├── .gitignore                         # Git ignore rules
+├── requirements.txt                   # Python dependencies
+├── Dockerfile                         # Docker configuration
+├── alembic.ini                        # Alembic configuration
+├── app.py                             # Legacy monolithic app (deprecated)
+├── app_new.py                         # New clean architecture entry point
+│
+├── docs/                              # Documentation folder
+│   ├── README.md                      # Documentation index
+│   ├── ARCHITECTURE.md                # Architecture guide
+│   ├── USER_MANAGEMENT.md             # User management guide
+│   ├── USER_VALIDATION_CHANGES.md     # Validation system changes
+│   ├── MIGRATION_GUIDE.md             # Migration guide
+│   └── REFACTORING_SUMMARY.md         # Refactoring overview
+│
+├── src/                               # Application source code
+│   ├── domain/                        # Domain layer (business logic)
+│   │   ├── entities/                  # Business entities
+│   │   │   ├── user.py                # User entity
+│   │   │   └── conversation.py        # Conversation & Message entities
+│   │   └── repositories/              # Repository interfaces
+│   │       ├── user_repository.py
+│   │       └── conversation_repository.py
+│   │
+│   ├── application/                   # Application layer (use cases)
+│   │   └── services/                  # Business services
+│   │       └── chat_service.py        # Chat processing service
+│   │
+│   ├── infrastructure/                # Infrastructure layer (external deps)
+│   │   ├── database/                  # Database layer
+│   │   │   ├── connection.py          # DB connection & session
+│   │   │   └── models.py              # SQLAlchemy models
+│   │   ├── repositories/              # Repository implementations
+│   │   │   ├── postgres_user_repository.py
+│   │   │   └── postgres_conversation_repository.py
+│   │   └── ai/                        # AI services
+│   │       └── vertex_ai_service.py   # Vertex AI integration
+│   │
+│   ├── presentation/                  # Presentation layer (API)
+│   │   ├── controllers/               # Request handlers
+│   │   │   ├── whatsapp_controller.py # WhatsApp endpoints
+│   │   │   └── voice_controller.py    # Voice call endpoints
+│   │   └── routes.py                  # Route definitions
+│   │
+│   └── config/                        # Configuration
+│       └── dependencies.py            # Dependency injection
+│
+├── alembic/                           # Database migrations
+│   ├── env.py                         # Alembic environment
+│   ├── script.py.mako                 # Migration template
+│   └── versions/                      # Migration files
+│
+└── scripts/                           # Utility scripts
+    ├── add_user.py                    # User management CLI
+    ├── init_db.py                     # Database initialization
+    ├── create_migration.sh            # Create migration helper
+    └── quickstart.sh                  # Quick setup script
+
+Key Files:
+- app_new.py: Main application entry point
+- src/presentation/routes.py: API endpoint definitions
+- src/application/services/chat_service.py: Core business logic
+- src/infrastructure/database/models.py: Database schema
+- scripts/add_user.py: User management tool
+- docs/: All documentation files
+
+Layers (Clean Architecture):
+1. Domain: Business entities and rules (no dependencies)
+2. Application: Use cases and business logic
+3. Infrastructure: External services (DB, AI, APIs)
+4. Presentation: API controllers and routes
