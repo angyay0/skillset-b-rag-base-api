@@ -5,9 +5,10 @@ from sqlalchemy.orm import sessionmaker, Session
 from contextlib import contextmanager
 
 # Database configuration
+# Note: Using postgresql+psycopg for psycopg3 driver
 DATABASE_URL = os.getenv(
     'DATABASE_URL',
-    'postgresql://user:password@localhost:5432/blinky_db'
+    'postgresql+psycopg://user:password@localhost:5432/blinky_db'
 )
 
 # Create engine

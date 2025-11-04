@@ -25,7 +25,8 @@ from src.infrastructure.database.models import UserModel, ConversationModel, Mes
 target_metadata = Base.metadata
 
 # Override sqlalchemy.url with environment variable
-config.set_main_option('sqlalchemy.url', os.getenv('DATABASE_URL', 'postgresql://user:password@localhost:5432/blinky_db'))
+# Note: Using postgresql+psycopg for psycopg3 driver
+config.set_main_option('sqlalchemy.url', os.getenv('DATABASE_URL', 'postgresql+psycopg://user:password@localhost:5432/blinky_db'))
 
 
 def run_migrations_offline() -> None:

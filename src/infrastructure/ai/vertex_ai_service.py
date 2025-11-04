@@ -1,8 +1,11 @@
 import os
 import vertexai
 from vertexai.preview.generative_models import GenerativeModel
-from vertexai.preview import rag
-from vertexai.preview.generative_models import Tool
+try:
+    from vertexai.preview import rag
+except ImportError:
+    # RAG not available in this version
+    rag = None
 from typing import List, Dict, Optional
 
 
@@ -32,6 +35,10 @@ class VertexAIService:
     
     def _get_or_create_corpus(self, corpus_display_name: str):
         """Get existing corpus or create a new one"""
+        if rag is None:
+            print("Warning: RAG module not available in this version of google-cloud-aiplatform")
+            return None
+        
         try:
             # List existing corpora
             corpora = rag.list_corpora()
@@ -59,6 +66,9 @@ class VertexAIService:
             chunk_size: Size of text chunks for indexing
             chunk_overlap: Overlap between chunks
         """
+        if rag is None:
+            raise ValueError("RAG module not available in this version of google-cloud-aiplatform")
+        
         if not self.rag_corpus:
             raise ValueError("RAG corpus not initialized. Provide corpus_name during initialization.")
         
@@ -85,7 +95,7 @@ class VertexAIService:
         Returns:
             List of relevant context chunks with metadata
         """
-        if not self.rag_corpus:
+        if rag is None or not self.rag_corpus:
             return []
         
         try:
