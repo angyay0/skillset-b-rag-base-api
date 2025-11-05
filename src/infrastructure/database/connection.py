@@ -11,12 +11,14 @@ DATABASE_URL = os.getenv(
     'postgresql+psycopg://user:password@localhost:5432/blinky_db'
 )
 
-# Create engine
+# Create engine with better connection management
 engine = create_engine(
     DATABASE_URL,
-    pool_size=10,
-    max_overflow=20,
-    pool_pre_ping=True,
+    pool_size=5,  # Reduced from 10
+    max_overflow=10,  # Reduced from 20
+    pool_pre_ping=True,  # Test connections before using
+    pool_recycle=3600,  # Recycle connections after 1 hour
+    pool_timeout=30,  # Timeout for getting connection from pool
     echo=os.getenv('SQL_ECHO', 'false').lower() == 'true'
 )
 
@@ -28,13 +30,12 @@ Base = declarative_base()
 
 
 def get_db() -> Session:
-    """Get database session"""
+    """Get database session - WARNING: Caller must close the session!
+    
+    Prefer using get_db_context() context manager instead.
+    """
     db = SessionLocal()
-    try:
-        return db
-    except Exception:
-        db.close()
-        raise
+    return db
 
 
 @contextmanager

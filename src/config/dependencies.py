@@ -20,7 +20,12 @@ def get_ai_service() -> VertexAIService:
 
 
 def get_chat_service() -> ChatService:
-    """Get chat service with dependencies"""
+    """Get chat service with dependencies
+    
+    WARNING: This creates a new DB session each time. 
+    The session is NOT automatically closed - caller must manage it.
+    Consider refactoring to use context managers.
+    """
     db = get_db()
     user_repo = PostgresUserRepository(db)
     conversation_repo = PostgresConversationRepository(db)
