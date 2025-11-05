@@ -23,7 +23,7 @@ class ChatService:
         self.message_repo = message_repo
         self.ai_service = ai_service
         # Get max output tokens from environment or use default
-        self.max_output_tokens = int(os.getenv('MAX_OUTPUT_TOKENS', '300'))
+        self.max_output_tokens = int(os.getenv('MAX_OUTPUT_TOKENS', '110'))
     
     def process_message(
         self,

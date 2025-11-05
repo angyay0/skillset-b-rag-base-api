@@ -27,7 +27,7 @@ class VertexAIService:
         # Try to initialize Vertex AI
         try:
             vertexai.init(project=project_id, location=location)
-            self.model = GenerativeModel("gemini-2.5-flash-lite")
+            self.model = GenerativeModel("gemini-2.5-flash")
             
             # Initialize RAG corpus if name is provided
             if self.corpus_name:
@@ -130,7 +130,7 @@ class VertexAIService:
             print(f"Error retrieving contexts: {str(e)}")
             return []
     
-    def generate_response(self, question: str, context: str = None, language: str = 'es', use_rag: bool = True, max_output_tokens: int = 300) -> str:
+    def generate_response(self, question: str, context: str = None, language: str = 'es', use_rag: bool = True, max_output_tokens: int = 110) -> str:
         """Generate response from Vertex AI model with optional RAG retrieval
         
         Args:
