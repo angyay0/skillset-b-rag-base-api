@@ -34,6 +34,7 @@ class ChatService:
         
         # Get user (don't create automatically)
         user = self.user_repo.get_by_phone(phone_number)
+        print(f"{phone_number}")
         if not user:
             return self._get_no_access_message(language)
         

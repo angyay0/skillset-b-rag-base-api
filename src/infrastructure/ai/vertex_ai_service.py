@@ -27,7 +27,7 @@ class VertexAIService:
         # Try to initialize Vertex AI
         try:
             vertexai.init(project=project_id, location=location)
-            self.model = GenerativeModel("gemini-1.5-pro")
+            self.model = GenerativeModel("gemini-2.5-flash-lite")
             
             # Initialize RAG corpus if name is provided
             if self.corpus_name:

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 
@@ -28,14 +28,23 @@ class User:
         
         # Calculate expiration date
         expiration_date = self.created_at + timedelta(days=self.validity_days)
-        current_date = datetime.utcnow()
+        current_date = datetime.now(timezone.utc)
+        
+        # Ensure both datetimes are timezone-aware for comparison
+        if expiration_date.tzinfo is None:
+            expiration_date = expiration_date.replace(tzinfo=timezone.utc)
         
         return current_date <= expiration_date
     
     def days_remaining(self) -> int:
         """Get number of days remaining in service period"""
         expiration_date = self.created_at + timedelta(days=self.validity_days)
-        current_date = datetime.utcnow()
+        current_date = datetime.now(timezone.utc)
+        
+        # Ensure both datetimes are timezone-aware for comparison
+        if expiration_date.tzinfo is None:
+            expiration_date = expiration_date.replace(tzinfo=timezone.utc)
+        
         remaining = (expiration_date - current_date).days
         return max(0, remaining)
     
