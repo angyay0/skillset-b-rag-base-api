@@ -47,7 +47,28 @@ class MessageModel(Base):
     assistant_response = Column(Text, nullable=False)
     language = Column(String(10), nullable=False)
     message_metadata = Column(JSON, nullable=True)  # For storing message_sid, call_sid, etc.
+    response_time_ms = Column(Integer, nullable=True)  # Response generation time in milliseconds
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     
     # Relationships
     conversation = relationship("ConversationModel", back_populates="messages")
+
+
+class MetricModel(Base):
+    """Metrics database model for tracking errors and important events"""
+    __tablename__ = 'metrics'
+    
+    id = Column(Integer, primary_key=True, index=True)
+    metric_type = Column(String(50), nullable=False, index=True)  # 'error', 'warning', 'info', 'access_denied', 'expired_user'
+    severity = Column(String(20), nullable=False, index=True)  # 'low', 'medium', 'high', 'critical'
+    message = Column(Text, nullable=False)
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='SET NULL'), nullable=True, index=True)
+    conversation_id = Column(Integer, ForeignKey('conversations.id', ondelete='SET NULL'), nullable=True, index=True)
+    phone_number = Column(String(20), nullable=True, index=True)  # For cases where user doesn't exist
+    channel = Column(String(50), nullable=True)
+    error_details = Column(JSON, nullable=True)  # Stack trace, error code, etc.
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
+    
+    # Relationships
+    user = relationship("UserModel")
+    conversation = relationship("ConversationModel")

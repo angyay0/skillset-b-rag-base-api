@@ -24,3 +24,4 @@ class Message:
     language: str
     created_at: datetime
     metadata: Optional[dict] = None  # For storing message_sid, call_sid, etc.
+    response_time_ms: Optional[int] = None  # Time taken to generate response in milliseconds

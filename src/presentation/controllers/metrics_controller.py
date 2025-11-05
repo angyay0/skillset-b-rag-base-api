@@ -1,0 +1,99 @@
+from flask import jsonify, request
+from datetime import datetime, timedelta
+from src.application.services.metrics_service import MetricsService
+
+
+class MetricsController:
+    """Controller for metrics and dashboard endpoints"""
+    
+    def __init__(self, metrics_service: MetricsService):
+        self.metrics_service = metrics_service
+    
+    def get_dashboard_summary(self):
+        """Get comprehensive dashboard summary
+        
+        GET /api/metrics/dashboard
+        """
+        try:
+            summary = self.metrics_service.get_dashboard_summary()
+            return jsonify(summary), 200
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+    
+    def get_response_time_stats(self):
+        """Get response time statistics
+        
+        GET /api/metrics/response-time?days=7
+        """
+        try:
+            days = int(request.args.get('days', 7))
+            start_date = datetime.utcnow() - timedelta(days=days)
+            end_date = datetime.utcnow()
+            
+            stats = self.metrics_service.get_response_time_stats(start_date, end_date)
+            return jsonify(stats), 200
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+    
+    def get_response_time_by_hour(self):
+        """Get response time grouped by hour
+        
+        GET /api/metrics/response-time/hourly?hours=24
+        """
+        try:
+            hours = int(request.args.get('hours', 24))
+            data = self.metrics_service.get_response_time_by_hour(hours)
+            return jsonify(data), 200
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+    
+    def get_error_summary(self):
+        """Get error summary
+        
+        GET /api/metrics/errors?days=7
+        """
+        try:
+            days = int(request.args.get('days', 7))
+            start_date = datetime.utcnow() - timedelta(days=days)
+            end_date = datetime.utcnow()
+            
+            summary = self.metrics_service.get_error_summary(start_date, end_date)
+            return jsonify(summary), 200
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+    
+    def get_recent_errors(self):
+        """Get recent errors
+        
+        GET /api/metrics/errors/recent?limit=50
+        """
+        try:
+            limit = int(request.args.get('limit', 50))
+            errors = self.metrics_service.get_recent_errors(limit)
+            return jsonify(errors), 200
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+    
+    def get_message_volume(self):
+        """Get message volume by hour
+        
+        GET /api/metrics/volume?hours=24
+        """
+        try:
+            hours = int(request.args.get('hours', 24))
+            data = self.metrics_service.get_message_volume(hours)
+            return jsonify(data), 200
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+    
+    def get_access_denied_stats(self):
+        """Get access denied statistics
+        
+        GET /api/metrics/access-denied?days=7
+        """
+        try:
+            days = int(request.args.get('days', 7))
+            stats = self.metrics_service.get_access_denied_stats(days)
+            return jsonify(stats), 200
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
