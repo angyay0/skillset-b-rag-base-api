@@ -103,7 +103,7 @@ class WhatsAppController:
         
         # Process message through service
         response_text = self.chat_service.process_message(
-            phone_number=from_number,
+            phone_number=from_number.replace('whatsapp', ''),
             message_text=incoming_msg,
             channel='whatsapp_twilio',
             language=language,

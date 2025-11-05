@@ -21,17 +21,24 @@ class VertexAIService:
         
         self.project_id = project_id
         self.location = location
-        vertexai.init(project=project_id, location=location)
-        self.model = GenerativeModel("gemini-1.5-pro")
         self.corpus_name = corpus_name or os.getenv('RAG_CORPUS_NAME')
         self.rag_corpus = None
         
-        # Initialize RAG corpus if name is provided
-        if self.corpus_name:
-            try:
-                self.rag_corpus = self._get_or_create_corpus(self.corpus_name)
-            except Exception as e:
-                print(f"Warning: Could not initialize RAG corpus: {str(e)}")
+        # Try to initialize Vertex AI
+        try:
+            vertexai.init(project=project_id, location=location)
+            self.model = GenerativeModel("gemini-1.5-pro")
+            
+            # Initialize RAG corpus if name is provided
+            if self.corpus_name:
+                try:
+                    self.rag_corpus = self._get_or_create_corpus(self.corpus_name)
+                except Exception as e:
+                    print(f"Warning: Could not initialize RAG corpus: {str(e)}")
+        except Exception as e:
+            print(f"Error initializing Vertex AI: {str(e)}")
+            print("Application will continue without AI capabilities")
+            self.model = None
     
     def _get_or_create_corpus(self, corpus_display_name: str):
         """Get existing corpus or create a new one"""
@@ -132,6 +139,15 @@ class VertexAIService:
             language: Response language (es, en, pt)
             use_rag: Whether to use RAG retrieval for additional context
         """
+        # Check if model is initialized
+        if self.model is None:
+            error_messages = {
+                'es': 'Lo siento, el servicio de IA no está disponible en este momento. Por favor, contacta al administrador.',
+                'en': 'Sorry, the AI service is not available at the moment. Please contact the administrator.',
+                'pt': 'Desculpe, o serviço de IA não está disponível no momento. Entre em contato com o administrador.'
+            }
+            return error_messages.get(language, error_messages['es'])
+        
         try:
             # Build prompt based on language with Blinky's personality
             system_prompts = {
