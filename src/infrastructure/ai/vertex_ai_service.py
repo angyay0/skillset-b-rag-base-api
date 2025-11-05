@@ -168,7 +168,7 @@ class VertexAIService:
             
             # Add length instruction based on max_output_tokens
             length_instructions = {
-                'es': f'Mantén tu respuesta concisa (máximo {max_output_tokens} tokens, aproximadamente {int(max_output_tokens * 0.75)} palabras).',
+                'es': f'Mantén tu respuesta concisa (máximo {80} palabras).',
                 'en': f'Keep your response concise (maximum {max_output_tokens} tokens, approximately {int(max_output_tokens * 0.75)} words).',
                 'pt': f'Mantenha sua resposta concisa (máximo {max_output_tokens} tokens, aproximadamente {int(max_output_tokens * 0.75)} palavras).'
             }
@@ -195,7 +195,7 @@ class VertexAIService:
             
             # Configure generation parameters
             generation_config = {
-                "max_output_tokens": max_output_tokens,
+                #"max_output_tokens": max_output_tokens,
                 "temperature": 0.7,
                 "top_p": 0.9,
                 "top_k": 40
