@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Optional
+import os
 from src.domain.entities.user import User
 from src.domain.entities.conversation import Conversation, Message
 from src.domain.repositories.user_repository import UserRepository
@@ -21,6 +22,8 @@ class ChatService:
         self.conversation_repo = conversation_repo
         self.message_repo = message_repo
         self.ai_service = ai_service
+        # Get max output tokens from environment or use default
+        self.max_output_tokens = int(os.getenv('MAX_OUTPUT_TOKENS', '300'))
     
     def process_message(
         self,
@@ -34,7 +37,7 @@ class ChatService:
         
         # Get user (don't create automatically)
         user = self.user_repo.get_by_phone(phone_number)
-        print(f"{phone_number}")
+        #print(f"{phone_number}")
         if not user:
             return self._get_no_access_message(language)
         
@@ -51,11 +54,12 @@ class ChatService:
         history = self.message_repo.get_conversation_history(conversation.id, limit=5)
         context = self._build_context(history)
         
-        # Generate AI response
+        # Generate AI response with configurable max tokens
         ai_response = self.ai_service.generate_response(
             question=message_text,
             context=context,
-            language=user.language
+            language=user.language,
+            max_output_tokens=self.max_output_tokens
         )
         
         # Save message

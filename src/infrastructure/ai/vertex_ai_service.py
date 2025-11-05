@@ -130,7 +130,7 @@ class VertexAIService:
             print(f"Error retrieving contexts: {str(e)}")
             return []
     
-    def generate_response(self, question: str, context: str = None, language: str = 'es', use_rag: bool = True) -> str:
+    def generate_response(self, question: str, context: str = None, language: str = 'es', use_rag: bool = True, max_output_tokens: int = 300) -> str:
         """Generate response from Vertex AI model with optional RAG retrieval
         
         Args:
@@ -138,6 +138,11 @@ class VertexAIService:
             context: Conversation context
             language: Response language (es, en, pt)
             use_rag: Whether to use RAG retrieval for additional context
+            max_output_tokens: Maximum number of tokens in response (default: 300, ~225 words)
+                             - 150 tokens ≈ 110 words (very concise)
+                             - 300 tokens ≈ 225 words (concise, recommended for chat)
+                             - 500 tokens ≈ 375 words (moderate)
+                             - 1000 tokens ≈ 750 words (detailed)
         """
         # Check if model is initialized
         if self.model is None:
@@ -161,6 +166,14 @@ class VertexAIService:
             
             system_prompt = system_prompts.get(language, system_prompts['es'])
             
+            # Add length instruction based on max_output_tokens
+            length_instructions = {
+                'es': f'Mantén tu respuesta concisa (máximo {max_output_tokens} tokens, aproximadamente {int(max_output_tokens * 0.75)} palabras).',
+                'en': f'Keep your response concise (maximum {max_output_tokens} tokens, approximately {int(max_output_tokens * 0.75)} words).',
+                'pt': f'Mantenha sua resposta concisa (máximo {max_output_tokens} tokens, aproximadamente {int(max_output_tokens * 0.75)} palavras).'
+            }
+            length_instruction = length_instructions.get(language, length_instructions['es'])
+            
             # Retrieve relevant contexts from RAG corpus if enabled
             rag_context = ""
             if use_rag and self.rag_corpus:
@@ -171,6 +184,7 @@ class VertexAIService:
                         rag_context += f"\n[{idx}] {ctx['text']}\n"
             
             prompt = f"""{system_prompt}
+            {length_instruction}
             
             Contexto de la conversación: {context or 'Nueva conversación'}
             {rag_context}
@@ -179,7 +193,18 @@ class VertexAIService:
             
             Responde de manera útil y amigable, utilizando la información relevante si está disponible:"""
             
-            response = self.model.generate_content(prompt)
+            # Configure generation parameters
+            generation_config = {
+                "max_output_tokens": max_output_tokens,
+                "temperature": 0.7,
+                "top_p": 0.9,
+                "top_k": 40
+            }
+            
+            response = self.model.generate_content(
+                prompt,
+                generation_config=generation_config
+            )
             return response.text
         except Exception as e:
             print(f"Error generating response: {str(e)}")
