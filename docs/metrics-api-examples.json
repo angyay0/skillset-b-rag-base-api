@@ -1,0 +1,270 @@
+{
+  "endpoints": {
+    "dashboard_summary": {
+      "endpoint": "GET /api/metrics/dashboard",
+      "description": "Comprehensive dashboard summary with key metrics",
+      "example_response": {
+        "period": {
+          "start": "2024-11-25T10:00:00",
+          "end": "2024-11-26T10:00:00"
+        },
+        "messages": {
+          "total_24h": 1250,
+          "slow_responses_24h": 15
+        },
+        "response_time": {
+          "count": 1250,
+          "avg_ms": 850,
+          "min_ms": 120,
+          "max_ms": 4500,
+          "p50_ms": 750,
+          "p95_ms": 2100,
+          "p99_ms": 3800
+        },
+        "errors": {
+          "by_type": {
+            "error": 45,
+            "warning": 120,
+            "access_denied": 8
+          },
+          "by_severity": {
+            "low": 80,
+            "medium": 65,
+            "high": 18,
+            "critical": 2
+          },
+          "total": 173
+        },
+        "access_denied": {
+          "total_attempts": 8,
+          "unique_numbers": 5,
+          "top_numbers": [
+            ["+1234567890", 3],
+            ["+0987654321", 2]
+          ]
+        }
+      }
+    },
+    "conversation_stats": {
+      "endpoint": "GET /api/metrics/conversation-stats",
+      "description": "Conversation statistics with user information",
+      "example_response": [
+        {
+          "name": "Juan Pérez",
+          "phone_number": "+52155512345678",
+          "total_messages": 45,
+          "warnings": 2
+        },
+        {
+          "name": "María García",
+          "phone_number": "+52155587654321",
+          "total_messages": 78,
+          "warnings": 0
+        },
+        {
+          "name": "Carlos López",
+          "phone_number": "+52155598765432",
+          "total_messages": 23,
+          "warnings": 5
+        }
+      ]
+    },
+    "all_metrics": {
+      "endpoint": "GET /api/metrics/all-metrics",
+      "description": "All metrics with associated user names",
+      "example_response": [
+        {
+          "name": "Juan Pérez",
+          "metric_type": "error",
+          "severity": "high",
+          "description": "Failed to process message due to API timeout"
+        },
+        {
+          "name": "María García",
+          "metric_type": "warning",
+          "severity": "medium",
+          "description": "Slow response time detected (>3s)"
+        },
+        {
+          "name": "Carlos López",
+          "metric_type": "access_denied",
+          "severity": "critical",
+          "description": "User account expired, access denied"
+        }
+      ]
+    },
+    "unregistered_phones": {
+      "endpoint": "GET /api/metrics/unregistered-phones",
+      "description": "Phone numbers with no associated user account",
+      "example_response": [
+        {
+          "phone_number": "+52155599999999",
+          "attempt_count": 12,
+          "last_attempt": "2024-11-26T09:45:00",
+          "first_attempt": "2024-11-20T14:30:00",
+          "channel": "whatsapp"
+        },
+        {
+          "phone_number": "+52155588888888",
+          "attempt_count": 5,
+          "last_attempt": "2024-11-25T18:20:00",
+          "first_attempt": "2024-11-24T10:15:00",
+          "channel": "whatsapp_twilio"
+        }
+      ]
+    },
+    "user_stats": {
+      "endpoint": "GET /api/metrics/user-stats",
+      "description": "All users with message and warning counts",
+      "example_response": [
+        {
+          "name": "Ana Martínez",
+          "phone_number": "+52155511111111",
+          "total_messages": 156,
+          "total_warnings": 3
+        },
+        {
+          "name": "Carlos López",
+          "phone_number": "+52155522222222",
+          "total_messages": 89,
+          "total_warnings": 12
+        },
+        {
+          "name": "Juan Pérez",
+          "phone_number": "+52155533333333",
+          "total_messages": 234,
+          "total_warnings": 1
+        }
+      ]
+    },
+    "peak_hours": {
+      "endpoint": "GET /api/metrics/peak-hours",
+      "description": "Peak interaction hours throughout the day",
+      "example_response": [
+        {
+          "hour_of_day": 14,
+          "interaction_count": 245,
+          "unique_users": 78
+        },
+        {
+          "hour_of_day": 10,
+          "interaction_count": 198,
+          "unique_users": 65
+        },
+        {
+          "hour_of_day": 16,
+          "interaction_count": 187,
+          "unique_users": 62
+        },
+        {
+          "hour_of_day": 9,
+          "interaction_count": 156,
+          "unique_users": 54
+        }
+      ]
+    },
+    "response_time": {
+      "endpoint": "GET /api/metrics/response-time?days=7",
+      "description": "Response time statistics for specified period",
+      "example_response": {
+        "count": 8750,
+        "avg_ms": 920,
+        "min_ms": 95,
+        "max_ms": 5200,
+        "p50_ms": 780,
+        "p95_ms": 2300,
+        "p99_ms": 4100
+      }
+    },
+    "response_time_hourly": {
+      "endpoint": "GET /api/metrics/response-time/hourly?hours=24",
+      "description": "Average response time grouped by hour",
+      "example_response": [
+        {
+          "hour": "2024-11-26T09:00:00",
+          "avg_ms": 850,
+          "count": 45
+        },
+        {
+          "hour": "2024-11-26T10:00:00",
+          "avg_ms": 920,
+          "count": 52
+        },
+        {
+          "hour": "2024-11-26T11:00:00",
+          "avg_ms": 780,
+          "count": 48
+        }
+      ]
+    },
+    "errors": {
+      "endpoint": "GET /api/metrics/errors?days=7",
+      "description": "Error summary statistics",
+      "example_response": {
+        "by_type": {
+          "error": 145,
+          "warning": 320,
+          "access_denied": 28,
+          "expired_user": 12
+        },
+        "by_severity": {
+          "low": 280,
+          "medium": 165,
+          "high": 48,
+          "critical": 12
+        },
+        "total": 505
+      }
+    },
+    "recent_errors": {
+      "endpoint": "GET /api/metrics/errors/recent?limit=50",
+      "description": "Recent errors with details",
+      "example_response": [
+        {
+          "id": 1234,
+          "type": "error",
+          "severity": "high",
+          "message": "API timeout while processing message",
+          "phone_number": "+52155512345678",
+          "channel": "whatsapp",
+          "error_details": {
+            "error_code": "TIMEOUT",
+            "stack_trace": "..."
+          },
+          "created_at": "2024-11-26T09:45:23"
+        }
+      ]
+    },
+    "message_volume": {
+      "endpoint": "GET /api/metrics/volume?hours=24",
+      "description": "Message volume grouped by hour",
+      "example_response": [
+        {
+          "hour": "2024-11-26T09:00:00",
+          "count": 45
+        },
+        {
+          "hour": "2024-11-26T10:00:00",
+          "count": 52
+        },
+        {
+          "hour": "2024-11-26T11:00:00",
+          "count": 48
+        }
+      ]
+    },
+    "access_denied": {
+      "endpoint": "GET /api/metrics/access-denied?days=7",
+      "description": "Access denied statistics",
+      "example_response": {
+        "total_attempts": 28,
+        "unique_numbers": 15,
+        "top_numbers": [
+          ["+52155599999999", 8],
+          ["+52155588888888", 5],
+          ["+52155577777777", 3]
+        ]
+      }
+    }
+  }
+}

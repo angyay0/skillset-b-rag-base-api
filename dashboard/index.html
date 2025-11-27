@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blinky Metrics Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <h1>📊 Blinky Metrics Dashboard</h1>
+            <div class="header-info">
+                <span id="last-updated">Last updated: --</span>
+                <button id="refresh-btn" class="refresh-btn">🔄 Refresh</button>
+            </div>
+        </header>
+
+        <!-- Summary Cards -->
+        <section class="summary-cards">
+            <div class="card">
+                <div class="card-icon">💬</div>
+                <div class="card-content">
+                    <h3>Total Messages (24h)</h3>
+                    <p class="card-value" id="total-messages">--</p>
+                    <span class="card-subtitle">Last 24 hours</span>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-icon">⚡</div>
+                <div class="card-content">
+                    <h3>Avg Response Time</h3>
+                    <p class="card-value" id="avg-response">--</p>
+                    <span class="card-subtitle">Milliseconds</span>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-icon">⚠️</div>
+                <div class="card-content">
+                    <h3>Total Errors (7d)</h3>
+                    <p class="card-value" id="total-errors">--</p>
+                    <span class="card-subtitle">Last 7 days</span>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-icon">🚫</div>
+                <div class="card-content">
+                    <h3>Access Denied</h3>
+                    <p class="card-value" id="access-denied">--</p>
+                    <span class="card-subtitle">Unique numbers</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Charts Row 1 -->
+        <section class="charts-row">
+            <div class="chart-container">
+                <h2>Peak Interaction Hours</h2>
+                <canvas id="peak-hours-chart"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <h2>Message Volume (24h)</h2>
+                <canvas id="message-volume-chart"></canvas>
+            </div>
+        </section>
+
+        <!-- Charts Row 2 -->
+        <section class="charts-row">
+            <div class="chart-container">
+                <h2>Response Time by Hour</h2>
+                <canvas id="response-time-chart"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <h2>Errors by Type</h2>
+                <canvas id="errors-type-chart"></canvas>
+            </div>
+        </section>
+
+        <!-- Charts Row 3 -->
+        <section class="charts-row">
+            <div class="chart-container">
+                <h2>Errors by Severity</h2>
+                <canvas id="errors-severity-chart"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <h2>Response Time Distribution</h2>
+                <canvas id="response-distribution-chart"></canvas>
+            </div>
+        </section>
+
+        <!-- Tables Section -->
+        <section class="tables-section">
+            <!-- User Stats Table -->
+            <div class="table-container">
+                <h2>👥 User Statistics</h2>
+                <div class="table-wrapper">
+                    <table id="user-stats-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Phone Number</th>
+                                <th>Messages</th>
+                                <th>Warnings</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td colspan="4" class="loading">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Unregistered Phones Table -->
+            <div class="table-container">
+                <h2>📱 Unregistered Phone Numbers</h2>
+                <div class="table-wrapper">
+                    <table id="unregistered-phones-table">
+                        <thead>
+                            <tr>
+                                <th>Phone Number</th>
+                                <th>Attempts</th>
+                                <th>Channel</th>
+                                <th>Last Attempt</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td colspan="4" class="loading">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Recent Errors Table -->
+            <div class="table-container full-width">
+                <h2>🔴 Recent Errors</h2>
+                <div class="table-wrapper">
+                    <table id="recent-errors-table">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Type</th>
+                                <th>Severity</th>
+                                <th>Message</th>
+                                <th>Phone</th>
+                                <th>Channel</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td colspan="6" class="loading">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="dashboard.js"></script>
+</body>
+</html>

@@ -97,3 +97,58 @@ class MetricsController:
             return jsonify(stats), 200
         except Exception as e:
             return jsonify({'error': str(e)}), 500
+    
+    def get_conversation_stats(self):
+        """Get conversation stats with user names
+        
+        GET /api/metrics/conversation-stats
+        """
+        try:
+            stats = self.metrics_service.get_conversation_stats()
+            return jsonify(stats), 200
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+    
+    def get_all_metrics_with_users(self):
+        """Get all metrics with user names
+        
+        GET /api/metrics/all-metrics
+        """
+        try:
+            metrics = self.metrics_service.get_all_metrics_with_users()
+            return jsonify(metrics), 200
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+    
+    def get_unregistered_phone_numbers(self):
+        """Get phone numbers with no associated user
+        
+        GET /api/metrics/unregistered-phones
+        """
+        try:
+            phones = self.metrics_service.get_unregistered_phone_numbers()
+            return jsonify(phones), 200
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+    
+    def get_all_users_with_stats(self):
+        """Get all users with their message and warning counts
+        
+        GET /api/metrics/user-stats
+        """
+        try:
+            users = self.metrics_service.get_all_users_with_stats()
+            return jsonify(users), 200
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+    
+    def get_peak_interaction_hours(self):
+        """Get peak interaction hours throughout the day
+        
+        GET /api/metrics/peak-hours
+        """
+        try:
+            hours = self.metrics_service.get_peak_interaction_hours()
+            return jsonify(hours), 200
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500

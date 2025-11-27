@@ -20,4 +20,11 @@ def create_metrics_blueprint() -> Blueprint:
     bp.route('/volume', methods=['GET'])(controller.get_message_volume)
     bp.route('/access-denied', methods=['GET'])(controller.get_access_denied_stats)
     
+    # New dashboard routes based on metrics-query.sql
+    bp.route('/conversation-stats', methods=['GET'])(controller.get_conversation_stats)
+    bp.route('/all-metrics', methods=['GET'])(controller.get_all_metrics_with_users)
+    bp.route('/unregistered-phones', methods=['GET'])(controller.get_unregistered_phone_numbers)
+    bp.route('/user-stats', methods=['GET'])(controller.get_all_users_with_stats)
+    bp.route('/peak-hours', methods=['GET'])(controller.get_peak_interaction_hours)
+    
     return bp
