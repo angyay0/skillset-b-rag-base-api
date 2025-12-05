@@ -6,15 +6,32 @@
     <title>Blinky Metrics Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <link rel="stylesheet" href="styles.css">
+    <script src="auth.js"></script>
+    <script>
+        // Require authentication before loading dashboard
+        if (!requireAuth()) {
+            document.write('Redirecting to login...');
+        }
+    </script>
 </head>
 <body>
     <div class="dashboard-container">
         <!-- Header -->
         <header class="dashboard-header">
-            <h1>📊 Blinky Metrics Dashboard</h1>
+            <h1 data-i18n="dashboard.title">📊 Blinky Metrics Dashboard</h1>
             <div class="header-info">
-                <span id="last-updated">Last updated: --</span>
-                <button id="refresh-btn" class="refresh-btn">🔄 Refresh</button>
+                <div class="date-filter">
+                    <label for="from-date" data-i18n="dashboard.fromDate">From:</label>
+                    <input type="date" id="from-date" class="date-input">
+                    <button id="clear-date-btn" class="clear-date-btn" data-i18n="dashboard.clearDate">Clear</button>
+                </div>
+                <select id="language-selector" class="language-selector">
+                    <option value="en">English</option>
+                    <option value="es">Español</option>
+                </select>
+                <span id="last-updated" data-i18n="dashboard.lastUpdated">Last updated: --</span>
+                <button id="refresh-btn" class="refresh-btn" data-i18n="dashboard.refresh">🔄 Refresh</button>
+                <button id="logout-btn" class="logout-btn" data-i18n="dashboard.logout">🚪 Logout</button>
             </div>
         </header>
 
@@ -23,36 +40,36 @@
             <div class="card">
                 <div class="card-icon">💬</div>
                 <div class="card-content">
-                    <h3>Total Messages (24h)</h3>
+                    <h3 data-i18n="cards.totalMessages">Total Messages (24h)</h3>
                     <p class="card-value" id="total-messages">--</p>
-                    <span class="card-subtitle">Last 24 hours</span>
+                    <span class="card-subtitle" data-i18n="cards.last24h">Last 24 hours</span>
                 </div>
             </div>
             
             <div class="card">
                 <div class="card-icon">⚡</div>
                 <div class="card-content">
-                    <h3>Avg Response Time</h3>
+                    <h3 data-i18n="cards.avgResponse">Avg Response Time</h3>
                     <p class="card-value" id="avg-response">--</p>
-                    <span class="card-subtitle">Milliseconds</span>
+                    <span class="card-subtitle" data-i18n="cards.milliseconds">Milliseconds</span>
                 </div>
             </div>
             
             <div class="card">
                 <div class="card-icon">⚠️</div>
                 <div class="card-content">
-                    <h3>Total Errors (7d)</h3>
+                    <h3 data-i18n="cards.totalErrors">Total Errors (7d)</h3>
                     <p class="card-value" id="total-errors">--</p>
-                    <span class="card-subtitle">Last 7 days</span>
+                    <span class="card-subtitle" data-i18n="cards.last7days">Last 7 days</span>
                 </div>
             </div>
             
             <div class="card">
                 <div class="card-icon">🚫</div>
                 <div class="card-content">
-                    <h3>Access Denied</h3>
+                    <h3 data-i18n="cards.accessDenied">Access Denied</h3>
                     <p class="card-value" id="access-denied">--</p>
-                    <span class="card-subtitle">Unique numbers</span>
+                    <span class="card-subtitle" data-i18n="cards.uniqueNumbers">Unique numbers</span>
                 </div>
             </div>
         </section>
@@ -60,12 +77,12 @@
         <!-- Charts Row 1 -->
         <section class="charts-row">
             <div class="chart-container">
-                <h2>Peak Interaction Hours</h2>
+                <h2 data-i18n="charts.peakHours">Peak Interaction Hours</h2>
                 <canvas id="peak-hours-chart"></canvas>
             </div>
             
             <div class="chart-container">
-                <h2>Message Volume (24h)</h2>
+                <h2 data-i18n="charts.messageVolume">Message Volume (24h)</h2>
                 <canvas id="message-volume-chart"></canvas>
             </div>
         </section>
@@ -73,12 +90,12 @@
         <!-- Charts Row 2 -->
         <section class="charts-row">
             <div class="chart-container">
-                <h2>Response Time by Hour</h2>
+                <h2 data-i18n="charts.responseTime">Response Time by Hour</h2>
                 <canvas id="response-time-chart"></canvas>
             </div>
             
             <div class="chart-container">
-                <h2>Errors by Type</h2>
+                <h2 data-i18n="charts.errorsByType">Errors by Type</h2>
                 <canvas id="errors-type-chart"></canvas>
             </div>
         </section>
@@ -86,12 +103,12 @@
         <!-- Charts Row 3 -->
         <section class="charts-row">
             <div class="chart-container">
-                <h2>Errors by Severity</h2>
+                <h2 data-i18n="charts.errorsBySeverity">Errors by Severity</h2>
                 <canvas id="errors-severity-chart"></canvas>
             </div>
             
             <div class="chart-container">
-                <h2>Response Time Distribution</h2>
+                <h2 data-i18n="charts.responseDistribution">Response Time Distribution</h2>
                 <canvas id="response-distribution-chart"></canvas>
             </div>
         </section>
@@ -100,15 +117,15 @@
         <section class="tables-section">
             <!-- User Stats Table -->
             <div class="table-container">
-                <h2>👥 User Statistics</h2>
+                <h2 data-i18n="tables.userStats">👥 User Statistics</h2>
                 <div class="table-wrapper">
                     <table id="user-stats-table">
                         <thead>
                             <tr>
-                                <th>Name</th>
-                                <th>Phone Number</th>
-                                <th>Messages</th>
-                                <th>Warnings</th>
+                                <th data-i18n="table.name">Name</th>
+                                <th data-i18n="table.phoneNumber">Phone Number</th>
+                                <th data-i18n="table.messages">Messages</th>
+                                <th data-i18n="table.warnings">Warnings</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -120,15 +137,15 @@
 
             <!-- Unregistered Phones Table -->
             <div class="table-container">
-                <h2>📱 Unregistered Phone Numbers</h2>
+                <h2 data-i18n="tables.unregisteredPhones">📱 Unregistered Phone Numbers</h2>
                 <div class="table-wrapper">
                     <table id="unregistered-phones-table">
                         <thead>
                             <tr>
-                                <th>Phone Number</th>
-                                <th>Attempts</th>
-                                <th>Channel</th>
-                                <th>Last Attempt</th>
+                                <th data-i18n="table.phoneNumber">Phone Number</th>
+                                <th data-i18n="table.attempts">Attempts</th>
+                                <th data-i18n="table.channel">Channel</th>
+                                <th data-i18n="table.lastAttempt">Last Attempt</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -140,21 +157,42 @@
 
             <!-- Recent Errors Table -->
             <div class="table-container full-width">
-                <h2>🔴 Recent Errors</h2>
+                <h2 data-i18n="tables.recentErrors">🔴 Recent Errors</h2>
                 <div class="table-wrapper">
                     <table id="recent-errors-table">
                         <thead>
                             <tr>
-                                <th>Time</th>
-                                <th>Type</th>
-                                <th>Severity</th>
-                                <th>Message</th>
-                                <th>Phone</th>
-                                <th>Channel</th>
+                                <th data-i18n="table.time">Time</th>
+                                <th data-i18n="table.type">Type</th>
+                                <th data-i18n="table.severity">Severity</th>
+                                <th data-i18n="table.message">Message</th>
+                                <th data-i18n="table.phone">Phone</th>
+                                <th data-i18n="table.channel">Channel</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr><td colspan="6" class="loading">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Frequent Questions Table -->
+            <div class="table-container full-width">
+                <h2 data-i18n="tables.frequentQuestions">❓ Most Frequent Questions</h2>
+                <div class="table-wrapper">
+                    <table id="frequent-questions-table">
+                        <thead>
+                            <tr>
+                                <th data-i18n="table.question">Question</th>
+                                <th data-i18n="table.frequency">Frequency</th>
+                                <th data-i18n="table.uniqueUsers">Unique Users</th>
+                                <th data-i18n="table.firstAsked">First Asked</th>
+                                <th data-i18n="table.lastAsked">Last Asked</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td colspan="5" class="loading">Loading...</td></tr>
                         </tbody>
                     </table>
                 </div>

@@ -1,22 +1,192 @@
 // Configuration
-const API_BASE_URL = 'api/metrics';
+const API_BASE_URL = 'http://localhost:5003/api/metrics';
 
 // Chart instances
 let charts = {};
+
+// Current language
+let currentLanguage = localStorage.getItem('dashboardLanguage') || 'en';
+
+// Current date filter
+let currentFromDate = null;
+
+// Translations
+const translations = {
+    en: {
+        dashboard: {
+            title: '📊 Blinky Metrics Dashboard',
+            lastUpdated: 'Last updated:',
+            refresh: '🔄 Refresh',
+            fromDate: 'From:',
+            clearDate: 'Clear',
+            logout: '🚪 Logout'
+        },
+        cards: {
+            totalMessages: 'Total Messages (24h)',
+            last24h: 'Last 24 hours',
+            avgResponse: 'Avg Response Time',
+            milliseconds: 'Milliseconds',
+            totalErrors: 'Total Errors (7d)',
+            last7days: 'Last 7 days',
+            accessDenied: 'Access Denied',
+            uniqueNumbers: 'Unique numbers'
+        },
+        charts: {
+            peakHours: 'Peak Interaction Hours',
+            messageVolume: 'Message Volume (24h)',
+            responseTime: 'Response Time by Hour',
+            errorsByType: 'Errors by Type',
+            errorsBySeverity: 'Errors by Severity',
+            responseDistribution: 'Response Time Distribution'
+        },
+        tables: {
+            userStats: '👥 User Statistics',
+            unregisteredPhones: '📱 Unregistered Phone Numbers',
+            recentErrors: '🔴 Recent Errors',
+            frequentQuestions: '❓ Most Frequent Questions'
+        },
+        table: {
+            name: 'Name',
+            phoneNumber: 'Phone Number',
+            messages: 'Messages',
+            warnings: 'Warnings',
+            attempts: 'Attempts',
+            channel: 'Channel',
+            lastAttempt: 'Last Attempt',
+            time: 'Time',
+            type: 'Type',
+            severity: 'Severity',
+            message: 'Message',
+            phone: 'Phone',
+            question: 'Question',
+            frequency: 'Frequency',
+            uniqueUsers: 'Unique Users',
+            firstAsked: 'First Asked',
+            lastAsked: 'Last Asked'
+        }
+    },
+    es: {
+        dashboard: {
+            title: '📊 Panel de Métricas Blinky',
+            lastUpdated: 'Última actualización:',
+            refresh: '🔄 Actualizar',
+            fromDate: 'Desde:',
+            clearDate: 'Limpiar',
+            logout: '🚪 Cerrar Sesión'
+        },
+        cards: {
+            totalMessages: 'Mensajes Totales (24h)',
+            last24h: 'Últimas 24 horas',
+            avgResponse: 'Tiempo de Respuesta Promedio',
+            milliseconds: 'Milisegundos',
+            totalErrors: 'Errores Totales (7d)',
+            last7days: 'Últimos 7 días',
+            accessDenied: 'Acceso Denegado',
+            uniqueNumbers: 'Números únicos'
+        },
+        charts: {
+            peakHours: 'Horas Pico de Interacción',
+            messageVolume: 'Volumen de Mensajes (24h)',
+            responseTime: 'Tiempo de Respuesta por Hora',
+            errorsByType: 'Errores por Tipo',
+            errorsBySeverity: 'Errores por Severidad',
+            responseDistribution: 'Distribución de Tiempo de Respuesta'
+        },
+        tables: {
+            userStats: '👥 Estadísticas de Usuarios',
+            unregisteredPhones: '📱 Números de Teléfono No Registrados',
+            recentErrors: '🔴 Errores Recientes',
+            frequentQuestions: '❓ Preguntas Más Frecuentes'
+        },
+        table: {
+            name: 'Nombre',
+            phoneNumber: 'Número de Teléfono',
+            messages: 'Mensajes',
+            warnings: 'Advertencias',
+            attempts: 'Intentos',
+            channel: 'Canal',
+            lastAttempt: 'Último Intento',
+            time: 'Hora',
+            type: 'Tipo',
+            severity: 'Severidad',
+            message: 'Mensaje',
+            phone: 'Teléfono',
+            question: 'Pregunta',
+            frequency: 'Frecuencia',
+            uniqueUsers: 'Usuarios Únicos',
+            firstAsked: 'Primera Vez',
+            lastAsked: 'Última Vez'
+        }
+    }
+};
 
 // Initialize dashboard
 document.addEventListener('DOMContentLoaded', () => {
     initializeCharts();
     loadAllData();
     
+    // Set up language selector
+    const languageSelector = document.getElementById('language-selector');
+    languageSelector.value = currentLanguage;
+    languageSelector.addEventListener('change', (e) => {
+        currentLanguage = e.target.value;
+        localStorage.setItem('dashboardLanguage', currentLanguage);
+        applyTranslations();
+    });
+    
+    // Set up date filter
+    const fromDateInput = document.getElementById('from-date');
+    fromDateInput.addEventListener('change', (e) => {
+        currentFromDate = e.target.value || null;
+        loadAllData();
+    });
+    
+    // Set up clear date button
+    document.getElementById('clear-date-btn').addEventListener('click', () => {
+        fromDateInput.value = '';
+        currentFromDate = null;
+        loadAllData();
+    });
+    
+    // Apply initial translations
+    applyTranslations();
+    
     // Set up refresh button
     document.getElementById('refresh-btn').addEventListener('click', () => {
         loadAllData();
     });
     
+    // Set up logout button
+    document.getElementById('logout-btn').addEventListener('click', () => {
+        if (confirm(currentLanguage === 'es' ? '¿Estás seguro de que quieres cerrar sesión?' : 'Are you sure you want to logout?')) {
+            logout();
+        }
+    });
+    
     // Auto-refresh every 60 seconds
     setInterval(loadAllData, 60000);
 });
+
+// Apply translations to all elements with data-i18n attribute
+function applyTranslations() {
+    document.querySelectorAll('[data-i18n]').forEach(element => {
+        const key = element.getAttribute('data-i18n');
+        const keys = key.split('.');
+        let translation = translations[currentLanguage];
+        
+        for (const k of keys) {
+            translation = translation[k];
+            if (!translation) break;
+        }
+        
+        if (translation) {
+            element.textContent = translation;
+        }
+    });
+    
+    // Update last updated text
+    updateLastUpdated();
+}
 
 // Load all dashboard data
 async function loadAllData() {
@@ -29,7 +199,8 @@ async function loadAllData() {
             loadErrorsSummary(),
             loadUserStats(),
             loadUnregisteredPhones(),
-            loadRecentErrors()
+            loadRecentErrors(),
+            loadFrequentQuestions()
         ]);
         
         updateLastUpdated();
@@ -41,13 +212,21 @@ async function loadAllData() {
 // Update last updated timestamp
 function updateLastUpdated() {
     const now = new Date();
+    const prefix = translations[currentLanguage].dashboard.lastUpdated;
     document.getElementById('last-updated').textContent = 
-        `Last updated: ${now.toLocaleTimeString()}`;
+        `${prefix} ${now.toLocaleTimeString()}`;
 }
 
 // API calls
 async function fetchAPI(endpoint) {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`);
+    // Add from_date parameter if set
+    let url = `${API_BASE_URL}${endpoint}`;
+    if (currentFromDate) {
+        const separator = endpoint.includes('?') ? '&' : '?';
+        url += `${separator}from_date=${currentFromDate}`;
+    }
+    
+    const response = await fetch(url);
     if (!response.ok) {
         throw new Error(`API error: ${response.statusText}`);
     }
@@ -451,4 +630,43 @@ function updateChart(chartId, config) {
     
     // Create new chart
     charts[chartId] = new Chart(ctx, config);
+}
+
+// Load frequent questions
+async function loadFrequentQuestions() {
+    try {
+        const data = await fetchAPI('/frequent-questions?limit=15');
+        
+        const tbody = document.querySelector('#frequent-questions-table tbody');
+        tbody.innerHTML = '';
+        
+        data.forEach(item => {
+            const row = tbody.insertRow();
+            const firstAsked = item.first_asked ? 
+                new Date(item.first_asked).toLocaleDateString() : 'N/A';
+            const lastAsked = item.last_asked ? 
+                new Date(item.last_asked).toLocaleDateString() : 'N/A';
+            
+            // Truncate long questions
+            const questionText = item.question_text.length > 100 ? 
+                item.question_text.substring(0, 100) + '...' : 
+                item.question_text;
+            
+            row.innerHTML = `
+                <td title="${item.question_text}">${questionText}</td>
+                <td>${item.frequency}</td>
+                <td>${item.unique_users}</td>
+                <td>${firstAsked}</td>
+                <td>${lastAsked}</td>
+            `;
+        });
+        
+        if (data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="loading">No frequent questions found</td></tr>';
+        }
+    } catch (error) {
+        console.error('Error loading frequent questions:', error);
+        const tbody = document.querySelector('#frequent-questions-table tbody');
+        tbody.innerHTML = '<tr><td colspan="5" class="loading">Error loading data</td></tr>';
+    }
 }

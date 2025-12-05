@@ -377,19 +377,28 @@ class MetricsService:
             for result in results
         ]
     
-    def get_peak_interaction_hours(self) -> List[Dict]:
+    def get_peak_interaction_hours(self, from_date: Optional[datetime] = None) -> List[Dict]:
         """Get peak interaction hours throughout the day
         
+        Args:
+            from_date: Optional start date to filter messages
+            
         Returns:
             List of dicts with hour of day, interaction count, and unique users
         """
         # Query based on fifth SQL query in metrics-query.sql
-        results = self.db.query(
+        query = self.db.query(
             func.extract('hour', MessageModel.created_at).label('hour_of_day'),
             func.count(MessageModel.id).label('interaction_count'),
             func.count(func.distinct(MessageModel.conversation_id)).label('unique_users')
         )\
-            .join(ConversationModel, MessageModel.conversation_id == ConversationModel.id)\
+            .join(ConversationModel, MessageModel.conversation_id == ConversationModel.id)
+        
+        # Apply date filter if provided
+        if from_date:
+            query = query.filter(MessageModel.created_at >= from_date)
+        
+        results = query\
             .group_by(func.extract('hour', MessageModel.created_at))\
             .order_by(func.count(MessageModel.id).desc())\
             .all()
@@ -399,6 +408,51 @@ class MetricsService:
                 'hour_of_day': int(result.hour_of_day) if result.hour_of_day is not None else 0,
                 'interaction_count': result.interaction_count,
                 'unique_users': result.unique_users
+            }
+            for result in results
+        ]
+    
+    def get_frequent_questions(self, limit: int = 50, from_date: Optional[datetime] = None) -> List[Dict]:
+        """Get most frequent questions or message patterns
+        
+        Args:
+            limit: Maximum number of questions to return
+            from_date: Optional start date to filter messages
+            
+        Returns:
+            List of dicts with question text, frequency, unique users, and timestamps
+        """
+        # Query based on the frequent questions SQL query in metrics-query.sql
+        query = self.db.query(
+            func.lower(func.trim(MessageModel.user_message)).label('question_text'),
+            func.count(MessageModel.id).label('frequency'),
+            func.count(func.distinct(MessageModel.conversation_id)).label('unique_users'),
+            func.min(MessageModel.created_at).label('first_asked'),
+            func.max(MessageModel.created_at).label('last_asked')
+        )\
+            .join(ConversationModel, MessageModel.conversation_id == ConversationModel.id)\
+            .filter(MessageModel.user_message.isnot(None))\
+            .filter(func.length(MessageModel.user_message) > 5)\
+            .filter(func.length(MessageModel.user_message) < 500)
+        
+        # Apply date filter if provided
+        if from_date:
+            query = query.filter(MessageModel.created_at >= from_date)
+        
+        results = query\
+            .group_by(func.lower(func.trim(MessageModel.user_message)))\
+            .having(func.count(MessageModel.id) > 1)\
+            .order_by(func.count(MessageModel.id).desc(), func.count(func.distinct(MessageModel.conversation_id)).desc())\
+            .limit(limit)\
+            .all()
+        
+        return [
+            {
+                'question_text': result.question_text,
+                'frequency': result.frequency,
+                'unique_users': result.unique_users,
+                'first_asked': result.first_asked.isoformat() if result.first_asked else None,
+                'last_asked': result.last_asked.isoformat() if result.last_asked else None
             }
             for result in results
         ]

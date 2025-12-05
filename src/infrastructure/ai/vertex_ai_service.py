@@ -157,7 +157,7 @@ class VertexAIService:
             # Build prompt based on language with Blinky's personality
             system_prompts = {
                 'es': '''Eres Blinky, un asistente amigable y servicial. Tu objetivo es ayudar a los usuarios de manera clara, concisa y amable. 
-                Responde en español de manera conversacional y cercana, como un buen amigo que quiere ayudar.''',
+                Responde en español de manera conversacional y cercana, como un buen amigo que quiere ayudar. Agrega en tus respuestas algo amigable.''',
                 'en': '''You are Blinky, a friendly and helpful assistant buddy. Your goal is to help users in a clear, concise, and kind way.
                 Respond in English in a conversational and warm manner, like a good friend who wants to help.''',
                 'pt': '''Você é Blinky, um assistente amigável e prestativo. Seu objetivo é ajudar os usuários de forma clara, concisa e gentil.
@@ -168,7 +168,7 @@ class VertexAIService:
             
             # Add length instruction based on max_output_tokens
             length_instructions = {
-                'es': f'Mantén tu respuesta concisa (máximo {80} palabras).',
+                'es': f'Mantén tu respuesta concisa (máximo {80} palabras). Si te solicitan detallar o expandir de alguna manera, usa 300 palabras maximo. Si te solicitan situaciones o ayuda en situaciones basado en la informacion, usa 500 palabras maximo.',
                 'en': f'Keep your response concise (maximum {max_output_tokens} tokens, approximately {int(max_output_tokens * 0.75)} words).',
                 'pt': f'Mantenha sua resposta concisa (máximo {max_output_tokens} tokens, aproximadamente {int(max_output_tokens * 0.75)} palavras).'
             }
@@ -196,7 +196,7 @@ class VertexAIService:
             # Configure generation parameters
             generation_config = {
                 #"max_output_tokens": max_output_tokens,
-                "temperature": 0.7,
+                "temperature": 0.75,
                 "top_p": 0.9,
                 "top_k": 40
             }

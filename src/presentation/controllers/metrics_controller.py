@@ -145,10 +145,30 @@ class MetricsController:
     def get_peak_interaction_hours(self):
         """Get peak interaction hours throughout the day
         
-        GET /api/metrics/peak-hours
+        GET /api/metrics/peak-hours?from_date=2025-01-01
         """
         try:
-            hours = self.metrics_service.get_peak_interaction_hours()
+            from_date = None
+            if request.args.get('from_date'):
+                from_date = datetime.fromisoformat(request.args.get('from_date'))
+            
+            hours = self.metrics_service.get_peak_interaction_hours(from_date)
             return jsonify(hours), 200
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+    
+    def get_frequent_questions(self):
+        """Get most frequent questions or message patterns
+        
+        GET /api/metrics/frequent-questions?limit=50&from_date=2025-01-01
+        """
+        try:
+            limit = int(request.args.get('limit', 50))
+            from_date = None
+            if request.args.get('from_date'):
+                from_date = datetime.fromisoformat(request.args.get('from_date'))
+            
+            questions = self.metrics_service.get_frequent_questions(limit, from_date)
+            return jsonify(questions), 200
         except Exception as e:
             return jsonify({'error': str(e)}), 500
