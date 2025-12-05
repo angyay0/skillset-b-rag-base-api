@@ -1,10 +1,10 @@
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional
-from sqlalchemy import func
+from sqlalchemy import func, and_, or_
 from sqlalchemy.orm import Session
 from src.domain.entities.metric import Metric
 from src.domain.repositories.metric_repository import MetricRepository
-from src.infrastructure.database.models import MessageModel, MetricModel
+from src.infrastructure.database.models import MessageModel, MetricModel, UserModel, ConversationModel
 
 
 class MetricsService:
@@ -237,3 +237,222 @@ class MetricsService:
             'errors': error_summary,
             'access_denied': access_denied
         }
+    
+    def get_conversation_stats(self) -> List[Dict]:
+        """Get conversation stats with user names
+        
+        Returns:
+            List of dicts with user name, phone number, total messages, and warnings
+        """
+        # Query based on first SQL query in metrics-query.sql
+        results = self.db.query(
+            UserModel.name,
+            UserModel.phone_number,
+            func.count(MessageModel.id).label('total_messages'),
+            func.count(MetricModel.id).label('warnings')
+        )\
+            .join(ConversationModel, ConversationModel.user_id == UserModel.id)\
+            .join(MessageModel, MessageModel.conversation_id == ConversationModel.id)\
+            .outerjoin(MetricModel, MetricModel.conversation_id == ConversationModel.id)\
+            .group_by(UserModel.id, UserModel.name, UserModel.phone_number)\
+            .all()
+        
+        return [
+            {
+                'name': result.name,
+                'phone_number': result.phone_number,
+                'total_messages': result.total_messages,
+                'warnings': result.warnings
+            }
+            for result in results
+        ]
+    
+    def get_all_metrics_with_users(self) -> List[Dict]:
+        """Get all metrics with user names
+        
+        Returns:
+            List of dicts with user name, metric type, severity, and description
+        """
+        # Query based on second SQL query in metrics-query.sql
+        results = self.db.query(
+            UserModel.name,
+            MetricModel.metric_type,
+            MetricModel.severity,
+            MetricModel.message.label('description')
+        )\
+            .join(UserModel, UserModel.id == MetricModel.user_id)\
+            .all()
+        
+        return [
+            {
+                'name': result.name,
+                'metric_type': result.metric_type,
+                'severity': result.severity,
+                'description': result.description
+            }
+            for result in results
+        ]
+    
+    def get_unregistered_phone_numbers(self) -> List[Dict]:
+        """Get phone numbers with no associated user
+        
+        Returns:
+            List of dicts with phone number, attempt count, and timestamps
+        """
+        # Query based on third SQL query in metrics-query.sql
+        # Subquery to get all user phone numbers
+        user_phones_subq = self.db.query(UserModel.phone_number).subquery()
+        
+        results = self.db.query(
+            MetricModel.phone_number,
+            func.count(MetricModel.id).label('attempt_count'),
+            func.max(MetricModel.created_at).label('last_attempt'),
+            func.min(MetricModel.created_at).label('first_attempt'),
+            MetricModel.channel
+        )\
+            .filter(
+                and_(
+                    MetricModel.phone_number.isnot(None),
+                    ~MetricModel.phone_number.in_(user_phones_subq)
+                )
+            )\
+            .group_by(MetricModel.phone_number, MetricModel.channel)\
+            .order_by(func.count(MetricModel.id).desc())\
+            .all()
+        
+        return [
+            {
+                'phone_number': result.phone_number,
+                'attempt_count': result.attempt_count,
+                'last_attempt': result.last_attempt.isoformat() if result.last_attempt else None,
+                'first_attempt': result.first_attempt.isoformat() if result.first_attempt else None,
+                'channel': result.channel
+            }
+            for result in results
+        ]
+    
+    def get_all_users_with_stats(self) -> List[Dict]:
+        """Get all users with their message and warning counts
+        
+        Returns:
+            List of dicts with user name, phone number, total messages, and total warnings
+        """
+        # Query based on fourth SQL query in metrics-query.sql
+        # Subquery for message counts
+        msg_counts_subq = self.db.query(
+            ConversationModel.user_id,
+            func.count(MessageModel.id).label('mcnt')
+        )\
+            .join(MessageModel, MessageModel.conversation_id == ConversationModel.id)\
+            .group_by(ConversationModel.user_id)\
+            .subquery()
+        
+        # Subquery for warning counts
+        warning_counts_subq = self.db.query(
+            MetricModel.user_id,
+            func.count(MetricModel.id).label('total')
+        )\
+            .filter(MetricModel.user_id.isnot(None))\
+            .group_by(MetricModel.user_id)\
+            .subquery()
+        
+        results = self.db.query(
+            UserModel.name,
+            UserModel.phone_number,
+            func.coalesce(msg_counts_subq.c.mcnt, 0).label('total_messages'),
+            func.coalesce(warning_counts_subq.c.total, 0).label('total_warnings')
+        )\
+            .outerjoin(msg_counts_subq, msg_counts_subq.c.user_id == UserModel.id)\
+            .outerjoin(warning_counts_subq, warning_counts_subq.c.user_id == UserModel.id)\
+            .order_by(UserModel.name)\
+            .all()
+        
+        return [
+            {
+                'name': result.name,
+                'phone_number': result.phone_number,
+                'total_messages': result.total_messages,
+                'total_warnings': result.total_warnings
+            }
+            for result in results
+        ]
+    
+    def get_peak_interaction_hours(self, from_date: Optional[datetime] = None) -> List[Dict]:
+        """Get peak interaction hours throughout the day
+        
+        Args:
+            from_date: Optional start date to filter messages
+            
+        Returns:
+            List of dicts with hour of day, interaction count, and unique users
+        """
+        # Query based on fifth SQL query in metrics-query.sql
+        query = self.db.query(
+            func.extract('hour', MessageModel.created_at).label('hour_of_day'),
+            func.count(MessageModel.id).label('interaction_count'),
+            func.count(func.distinct(MessageModel.conversation_id)).label('unique_users')
+        )\
+            .join(ConversationModel, MessageModel.conversation_id == ConversationModel.id)
+        
+        # Apply date filter if provided
+        if from_date:
+            query = query.filter(MessageModel.created_at >= from_date)
+        
+        results = query\
+            .group_by(func.extract('hour', MessageModel.created_at))\
+            .order_by(func.count(MessageModel.id).desc())\
+            .all()
+        
+        return [
+            {
+                'hour_of_day': int(result.hour_of_day) if result.hour_of_day is not None else 0,
+                'interaction_count': result.interaction_count,
+                'unique_users': result.unique_users
+            }
+            for result in results
+        ]
+    
+    def get_frequent_questions(self, limit: int = 50, from_date: Optional[datetime] = None) -> List[Dict]:
+        """Get most frequent questions or message patterns
+        
+        Args:
+            limit: Maximum number of questions to return
+            from_date: Optional start date to filter messages
+            
+        Returns:
+            List of dicts with question text, frequency, unique users, and timestamps
+        """
+        # Query based on the frequent questions SQL query in metrics-query.sql
+        query = self.db.query(
+            func.lower(func.trim(MessageModel.user_message)).label('question_text'),
+            func.count(MessageModel.id).label('frequency'),
+            func.count(func.distinct(MessageModel.conversation_id)).label('unique_users'),
+            func.min(MessageModel.created_at).label('first_asked'),
+            func.max(MessageModel.created_at).label('last_asked')
+        )\
+            .join(ConversationModel, MessageModel.conversation_id == ConversationModel.id)\
+            .filter(MessageModel.user_message.isnot(None))\
+            .filter(func.length(MessageModel.user_message) > 5)\
+            .filter(func.length(MessageModel.user_message) < 500)
+        
+        # Apply date filter if provided
+        if from_date:
+            query = query.filter(MessageModel.created_at >= from_date)
+        
+        results = query\
+            .group_by(func.lower(func.trim(MessageModel.user_message)))\
+            .having(func.count(MessageModel.id) > 1)\
+            .order_by(func.count(MessageModel.id).desc(), func.count(func.distinct(MessageModel.conversation_id)).desc())\
+            .limit(limit)\
+            .all()
+        
+        return [
+            {
+                'question_text': result.question_text,
+                'frequency': result.frequency,
+                'unique_users': result.unique_users,
+                'first_asked': result.first_asked.isoformat() if result.first_asked else None,
+                'last_asked': result.last_asked.isoformat() if result.last_asked else None
+            }
+            for result in results
+        ]
