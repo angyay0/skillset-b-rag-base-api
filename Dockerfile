@@ -43,6 +43,7 @@ COPY --from=builder /opt/venv /opt/venv
 # Copy only necessary application files
 COPY --chown=appuser:appuser src ./src
 COPY --chown=appuser:appuser alembic ./alembic
+COPY --chown=appuser:appuser dashboard ./dashboard
 COPY --chown=appuser:appuser app_new.py .
 COPY --chown=appuser:appuser alembic.ini .
 COPY --chown=appuser:appuser .env* ./

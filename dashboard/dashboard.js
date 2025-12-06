@@ -1,5 +1,5 @@
 // Configuration
-const API_BASE_URL = 'http://localhost:5003/api/metrics';
+const API_BASE_URL = 'https://blinky-base-api-202115206437.us-east4.run.app/api/metrics';
 
 // Chart instances
 let charts = {};
