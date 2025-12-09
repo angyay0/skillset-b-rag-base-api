@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from src.domain.entities.metric import Metric
 from src.domain.repositories.metric_repository import MetricRepository
 from src.infrastructure.database.models import MessageModel, MetricModel, UserModel, ConversationModel
+from src.infrastructure.ai.vertex_ai_service import VertexAIService
 
 
 class MetricsService:
@@ -456,3 +457,202 @@ class MetricsService:
             }
             for result in results
         ]
+    
+    def _get_frequent_messages(self, limit: int = 100, from_date: Optional[datetime] = None) -> List[Dict]:
+        """Get most frequent user messages (internal method for clustering)
+        
+        Args:
+            limit: Maximum number of messages to return
+            from_date: Optional start date to filter messages
+            
+        Returns:
+            List of dicts with message text, frequency, unique users, and timestamps
+        """
+        query = self.db.query(
+            func.lower(func.trim(MessageModel.user_message)).label('message_text'),
+            func.count(MessageModel.id).label('frequency'),
+            func.count(func.distinct(MessageModel.conversation_id)).label('unique_users'),
+            func.min(MessageModel.created_at).label('first_asked'),
+            func.max(MessageModel.created_at).label('last_asked')
+        )\
+            .join(ConversationModel, MessageModel.conversation_id == ConversationModel.id)\
+            .filter(MessageModel.user_message.isnot(None))\
+            .filter(func.length(MessageModel.user_message) > 3)\
+            .filter(func.length(MessageModel.user_message) < 500)
+        
+        # Apply date filter if provided
+        if from_date:
+            query = query.filter(MessageModel.created_at >= from_date)
+        
+        results = query\
+            .group_by(func.lower(func.trim(MessageModel.user_message)))\
+            .having(func.count(MessageModel.id) > 1)\
+            .order_by(func.count(MessageModel.id).desc(), func.count(func.distinct(MessageModel.conversation_id)).desc())\
+            .limit(limit)\
+            .all()
+        
+        return [
+            {
+                'message_text': result.message_text,
+                'frequency': result.frequency,
+                'unique_users': result.unique_users,
+                'first_asked': result.first_asked.isoformat() if result.first_asked else None,
+                'last_asked': result.last_asked.isoformat() if result.last_asked else None
+            }
+            for result in results
+        ]
+    
+    def get_topic_clusters(self, limit: int = 100, from_date: Optional[datetime] = None, num_clusters: int = 5) -> Dict:
+        """Get user messages clustered by topic using AI
+        
+        Args:
+            limit: Maximum number of messages to analyze
+            from_date: Optional start date to filter messages
+            num_clusters: Number of topic clusters to identify
+            
+        Returns:
+            Dict with clusters, each containing topic name, description, messages, and stats
+        """
+        # Get frequent user messages (not just questions)
+        messages_data = self._get_frequent_messages(limit, from_date)
+        
+        if not messages_data or len(messages_data) == 0:
+            return {
+                'clusters': [],
+                'total_messages_analyzed': 0,
+                'total_interactions': 0,
+                'analysis_date': datetime.utcnow().isoformat()
+            }
+        
+        # Prepare messages text for AI analysis
+        messages_list = []
+        for idx, msg in enumerate(messages_data, 1):
+            messages_list.append(f"{idx}. {msg['message_text']} (sent {msg['frequency']} times by {msg['unique_users']} users)")
+        
+        messages_text = "\n".join(messages_list)
+        
+        # Create AI prompt for clustering
+        prompt = f"""Analyze the following user messages and group them into {num_clusters} main topic clusters.
+
+IMPORTANT INSTRUCTIONS:
+- Messages may be in Spanish or English - group by SEMANTIC MEANING, not language
+- Look for similar intents even if worded differently (e.g., "Vuca-Fani", "vuca fani", "vucafani" are the same)
+- Ignore typos, capitalization, and minor variations
+- Group messages about the same topic/intent together (questions, statements, requests, etc.)
+- Provide topic names and descriptions in Spanish if most messages are in Spanish, otherwise in English
+
+For each cluster, provide:
+1. A short topic name (2-4 words) - use the language of the majority of messages
+2. A brief description (1 sentence) - explain what users are asking/talking about
+3. The message numbers that belong to this cluster
+
+User Messages:
+{messages_text}
+
+Respond ONLY with valid JSON in this exact structure (no markdown, no extra text):
+{{
+    "clusters": [
+        {{
+            "topic": "Topic Name",
+            "description": "Brief description of what users are asking/talking about",
+            "message_numbers": [1, 2, 3]
+        }}
+    ]
+}}"""
+
+        try:
+            # Use VertexAI to cluster topics
+            ai_service = VertexAIService()
+            response_text = ai_service.generate_response(
+                question=prompt,
+                context="Topic clustering analysis",
+                language='en',
+                use_rag=False,
+                max_output_tokens=1000
+            )
+            
+            # Parse AI response
+            import json
+            import re
+            
+            # Clean up response text - remove markdown code blocks if present
+            cleaned_text = response_text.strip()
+            if cleaned_text.startswith('```'):
+                # Remove markdown code blocks
+                cleaned_text = re.sub(r'^```(?:json)?\s*', '', cleaned_text)
+                cleaned_text = re.sub(r'\s*```$', '', cleaned_text)
+            
+            # Extract JSON from response (in case AI adds extra text)
+            json_match = re.search(r'\{.*\}', cleaned_text, re.DOTALL)
+            if json_match:
+                ai_result = json.loads(json_match.group())
+            else:
+                raise ValueError(f"No valid JSON found in AI response. Response was: {response_text[:200]}")
+            
+            # Build clusters with actual message data
+            clusters = []
+            total_interactions = 0
+            
+            for cluster in ai_result.get('clusters', []):
+                message_numbers = cluster.get('message_numbers', []) or cluster.get('question_numbers', [])
+                cluster_messages = []
+                cluster_frequency = 0
+                cluster_unique_users = 0
+                
+                for msg_num in message_numbers:
+                    idx = msg_num - 1  # Convert to 0-indexed
+                    if 0 <= idx < len(messages_data):
+                        msg = messages_data[idx]
+                        cluster_messages.append({
+                            'text': msg['message_text'],
+                            'frequency': msg['frequency'],
+                            'unique_users': msg['unique_users']
+                        })
+                        cluster_frequency += msg['frequency']
+                        cluster_unique_users += msg['unique_users']
+                
+                if cluster_messages:
+                    clusters.append({
+                        'topic': cluster.get('topic', 'Unknown Topic'),
+                        'description': cluster.get('description', ''),
+                        'total_messages': len(cluster_messages),
+                        'total_frequency': cluster_frequency,
+                        'total_unique_users': cluster_unique_users,
+                        'questions': cluster_messages[:5]  # Limit to top 5 messages per cluster
+                    })
+                    total_interactions += cluster_frequency
+            
+            # Sort clusters by frequency
+            clusters.sort(key=lambda x: x['total_frequency'], reverse=True)
+            
+            return {
+                'clusters': clusters,
+                'total_questions_analyzed': len(messages_data),
+                'total_interactions': total_interactions,
+                'analysis_date': datetime.utcnow().isoformat()
+            }
+            
+        except Exception as e:
+            print(f"Error clustering topics: {str(e)}")
+            # Return a fallback simple clustering based on frequency
+            return {
+                'clusters': [{
+                    'topic': 'Most Frequent Messages',
+                    'description': 'Top messages sent by users',
+                    'total_messages': min(10, len(messages_data)),
+                    'total_frequency': sum(msg['frequency'] for msg in messages_data[:10]),
+                    'total_unique_users': sum(msg['unique_users'] for msg in messages_data[:10]),
+                    'questions': [
+                        {
+                            'text': msg['message_text'],
+                            'frequency': msg['frequency'],
+                            'unique_users': msg['unique_users']
+                        }
+                        for msg in messages_data[:10]
+                    ]
+                }],
+                'total_questions_analyzed': len(messages_data),
+                'total_interactions': sum(msg['frequency'] for msg in messages_data),
+                'analysis_date': datetime.utcnow().isoformat(),
+                'error': str(e)
+            }
