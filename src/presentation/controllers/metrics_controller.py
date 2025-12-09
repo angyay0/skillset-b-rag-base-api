@@ -172,3 +172,20 @@ class MetricsController:
             return jsonify(questions), 200
         except Exception as e:
             return jsonify({'error': str(e)}), 500
+    
+    def get_topic_clusters(self):
+        """Get user messages clustered by topic using AI
+        
+        GET /api/metrics/topic-clusters?limit=100&from_date=2025-01-01&num_clusters=5
+        """
+        try:
+            limit = int(request.args.get('limit', 100))
+            num_clusters = int(request.args.get('num_clusters', 5))
+            from_date = None
+            if request.args.get('from_date'):
+                from_date = datetime.fromisoformat(request.args.get('from_date'))
+            
+            clusters = self.metrics_service.get_topic_clusters(limit, from_date, num_clusters)
+            return jsonify(clusters), 200
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500

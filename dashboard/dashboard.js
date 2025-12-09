@@ -1,6 +1,7 @@
 // Configuration
 const API_BASE_URL = 'https://blinky-base-api-202115206437.us-east4.run.app/api/metrics';
 
+
 // Chart instances
 let charts = {};
 
@@ -43,7 +44,8 @@ const translations = {
             userStats: '👥 User Statistics',
             unregisteredPhones: '📱 Unregistered Phone Numbers',
             recentErrors: '🔴 Recent Errors',
-            frequentQuestions: '❓ Most Frequent Questions'
+            frequentQuestions: '❓ Most Frequent Questions',
+            topicClusters: '🎯 Topic Clusters (AI-Powered)'
         },
         table: {
             name: 'Name',
@@ -63,6 +65,18 @@ const translations = {
             uniqueUsers: 'Unique Users',
             firstAsked: 'First Asked',
             lastAsked: 'Last Asked'
+        },
+        clusters: {
+            analysisSummary: 'Analysis Summary:',
+            questionsAnalyzed: 'messages analyzed',
+            totalInteractions: 'total interactions',
+            asks: 'asks',
+            users: 'users',
+            sampleQuestions: 'Sample Messages',
+            total: 'total',
+            by: 'by',
+            noTopics: 'No topics found. Need more user messages to analyze.',
+            errorLoading: 'Error loading topic analysis'
         }
     },
     es: {
@@ -96,7 +110,8 @@ const translations = {
             userStats: '👥 Estadísticas de Usuarios',
             unregisteredPhones: '📱 Números de Teléfono No Registrados',
             recentErrors: '🔴 Errores Recientes',
-            frequentQuestions: '❓ Preguntas Más Frecuentes'
+            frequentQuestions: '❓ Preguntas Más Frecuentes',
+            topicClusters: '🎯 Agrupación de Temas (IA)'
         },
         table: {
             name: 'Nombre',
@@ -116,6 +131,18 @@ const translations = {
             uniqueUsers: 'Usuarios Únicos',
             firstAsked: 'Primera Vez',
             lastAsked: 'Última Vez'
+        },
+        clusters: {
+            analysisSummary: 'Resumen del Análisis:',
+            questionsAnalyzed: 'mensajes analizados',
+            totalInteractions: 'interacciones totales',
+            asks: 'consultas',
+            users: 'usuarios',
+            sampleQuestions: 'Mensajes de Muestra',
+            total: 'total',
+            by: 'por',
+            noTopics: 'No se encontraron temas. Se necesitan más mensajes de usuarios para analizar.',
+            errorLoading: 'Error al cargar el análisis de temas'
         }
     }
 };
@@ -200,7 +227,8 @@ async function loadAllData() {
             loadUserStats(),
             loadUnregisteredPhones(),
             loadRecentErrors(),
-            loadFrequentQuestions()
+            loadFrequentQuestions(),
+            loadTopicClusters()
         ]);
         
         updateLastUpdated();
@@ -668,5 +696,75 @@ async function loadFrequentQuestions() {
         console.error('Error loading frequent questions:', error);
         const tbody = document.querySelector('#frequent-questions-table tbody');
         tbody.innerHTML = '<tr><td colspan="5" class="loading">Error loading data</td></tr>';
+    }
+}
+
+// Load topic clusters
+async function loadTopicClusters() {
+    try {
+        const data = await fetchAPI('/topic-clusters?limit=100&num_clusters=5');
+        
+        const container = document.getElementById('topic-clusters-container');
+        container.innerHTML = '';
+        
+        if (!data.clusters || data.clusters.length === 0) {
+            container.innerHTML = `<div class="loading">${translations[currentLanguage].clusters.noTopics}</div>`;
+            return;
+        }
+        
+        // Create summary info
+        const summary = document.createElement('div');
+        summary.className = 'clusters-summary';
+        const t = translations[currentLanguage].clusters;
+        summary.innerHTML = `
+            <p><strong>${t.analysisSummary}</strong> ${data.total_questions_analyzed} ${t.questionsAnalyzed}, ${data.total_interactions} ${t.totalInteractions}</p>
+        `;
+        container.appendChild(summary);
+        
+        // Create cluster cards
+        const clustersGrid = document.createElement('div');
+        clustersGrid.className = 'clusters-grid';
+        
+        data.clusters.forEach((cluster, index) => {
+            const clusterCard = document.createElement('div');
+            clusterCard.className = 'cluster-card';
+            
+            // Create questions list
+            const t = translations[currentLanguage].clusters;
+            let questionsList = '';
+            cluster.questions.forEach(q => {
+                const questionText = q.text.length > 80 ? q.text.substring(0, 80) + '...' : q.text;
+                questionsList += `
+                    <li class="cluster-question" title="${q.text}">
+                        <span class="question-text">${questionText}</span>
+                        <span class="question-stats">${q.frequency}x ${t.by} ${q.unique_users} ${t.users}</span>
+                    </li>
+                `;
+            });
+            
+            clusterCard.innerHTML = `
+                <div class="cluster-header">
+                    <h3 class="cluster-topic">${index + 1}. ${cluster.topic}</h3>
+                    <div class="cluster-stats">
+                        <span class="stat-badge">${cluster.total_frequency} ${t.asks}</span>
+                        <span class="stat-badge">${cluster.total_unique_users} ${t.users}</span>
+                    </div>
+                </div>
+                <p class="cluster-description">${cluster.description}</p>
+                <div class="cluster-questions">
+                    <strong>${t.sampleQuestions} (${cluster.total_questions} ${t.total}):</strong>
+                    <ul>${questionsList}</ul>
+                </div>
+            `;
+            
+            clustersGrid.appendChild(clusterCard);
+        });
+        
+        container.appendChild(clustersGrid);
+        
+    } catch (error) {
+        console.error('Error loading topic clusters:', error);
+        const container = document.getElementById('topic-clusters-container');
+        container.innerHTML = `<div class="loading">${translations[currentLanguage].clusters.errorLoading}</div>`;
     }
 }

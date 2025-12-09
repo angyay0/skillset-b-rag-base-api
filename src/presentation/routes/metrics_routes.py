@@ -27,5 +27,6 @@ def create_metrics_blueprint() -> Blueprint:
     bp.route('/user-stats', methods=['GET'])(controller.get_all_users_with_stats)
     bp.route('/peak-hours', methods=['GET'])(controller.get_peak_interaction_hours)
     bp.route('/frequent-questions', methods=['GET'])(controller.get_frequent_questions)
+    bp.route('/topic-clusters', methods=['GET'])(controller.get_topic_clusters)
     
     return bp
