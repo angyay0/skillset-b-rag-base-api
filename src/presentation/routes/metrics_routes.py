@@ -1,5 +1,7 @@
-from flask import Blueprint
-from src.config.dependencies import get_metrics_service
+from flask import Blueprint, jsonify
+from src.infrastructure.database.connection import get_db_context
+from src.infrastructure.database.metric_repository_impl import MetricRepositoryImpl
+from src.application.services.metrics_service import MetricsService
 from src.presentation.controllers.metrics_controller import MetricsController
 
 
@@ -7,26 +9,34 @@ def create_metrics_blueprint() -> Blueprint:
     """Create and configure metrics blueprint"""
     bp = Blueprint('metrics', __name__, url_prefix='/api/metrics')
     
-    # Initialize controller
-    metrics_service = get_metrics_service()
-    controller = MetricsController(metrics_service)
+    # Helper function to create controller with proper session management
+    def with_metrics_controller(handler_method):
+        """Decorator to provide controller with proper DB session management"""
+        def wrapper(*args, **kwargs):
+            with get_db_context() as db:
+                metric_repo = MetricRepositoryImpl(db)
+                metrics_service = MetricsService(metric_repo, db)
+                controller = MetricsController(metrics_service)
+                return getattr(controller, handler_method)(*args, **kwargs)
+        wrapper.__name__ = handler_method
+        return wrapper
     
-    # Register routes
-    bp.route('/dashboard', methods=['GET'])(controller.get_dashboard_summary)
-    bp.route('/response-time', methods=['GET'])(controller.get_response_time_stats)
-    bp.route('/response-time/hourly', methods=['GET'])(controller.get_response_time_by_hour)
-    bp.route('/errors', methods=['GET'])(controller.get_error_summary)
-    bp.route('/errors/recent', methods=['GET'])(controller.get_recent_errors)
-    bp.route('/volume', methods=['GET'])(controller.get_message_volume)
-    bp.route('/access-denied', methods=['GET'])(controller.get_access_denied_stats)
+    # Register routes with session management
+    bp.route('/dashboard', methods=['GET'])(with_metrics_controller('get_dashboard_summary'))
+    bp.route('/response-time', methods=['GET'])(with_metrics_controller('get_response_time_stats'))
+    bp.route('/response-time/hourly', methods=['GET'])(with_metrics_controller('get_response_time_by_hour'))
+    bp.route('/errors', methods=['GET'])(with_metrics_controller('get_error_summary'))
+    bp.route('/errors/recent', methods=['GET'])(with_metrics_controller('get_recent_errors'))
+    bp.route('/volume', methods=['GET'])(with_metrics_controller('get_message_volume'))
+    bp.route('/access-denied', methods=['GET'])(with_metrics_controller('get_access_denied_stats'))
     
     # New dashboard routes based on metrics-query.sql
-    bp.route('/conversation-stats', methods=['GET'])(controller.get_conversation_stats)
-    bp.route('/all-metrics', methods=['GET'])(controller.get_all_metrics_with_users)
-    bp.route('/unregistered-phones', methods=['GET'])(controller.get_unregistered_phone_numbers)
-    bp.route('/user-stats', methods=['GET'])(controller.get_all_users_with_stats)
-    bp.route('/peak-hours', methods=['GET'])(controller.get_peak_interaction_hours)
-    bp.route('/frequent-questions', methods=['GET'])(controller.get_frequent_questions)
-    bp.route('/topic-clusters', methods=['GET'])(controller.get_topic_clusters)
+    bp.route('/conversation-stats', methods=['GET'])(with_metrics_controller('get_conversation_stats'))
+    bp.route('/all-metrics', methods=['GET'])(with_metrics_controller('get_all_metrics_with_users'))
+    bp.route('/unregistered-phones', methods=['GET'])(with_metrics_controller('get_unregistered_phone_numbers'))
+    bp.route('/user-stats', methods=['GET'])(with_metrics_controller('get_all_users_with_stats'))
+    bp.route('/peak-hours', methods=['GET'])(with_metrics_controller('get_peak_interaction_hours'))
+    bp.route('/frequent-questions', methods=['GET'])(with_metrics_controller('get_frequent_questions'))
+    bp.route('/topic-clusters', methods=['GET'])(with_metrics_controller('get_topic_clusters'))
     
     return bp

@@ -1,5 +1,15 @@
 from flask import Blueprint, jsonify
-from src.config.dependencies import get_whatsapp_controller, get_voice_controller
+from src.infrastructure.database.connection import get_db_context
+from src.infrastructure.repositories.postgres_user_repository import PostgresUserRepository
+from src.infrastructure.repositories.postgres_conversation_repository import (
+    PostgresConversationRepository,
+    PostgresMessageRepository
+)
+from src.infrastructure.database.metric_repository_impl import MetricRepositoryImpl
+from src.infrastructure.ai.vertex_ai_service import VertexAIService
+from src.application.services.chat_service import ChatService
+from src.presentation.controllers.whatsapp_controller import WhatsAppController
+from src.presentation.controllers.voice_controller import VoiceController
 
 # Create blueprints
 whatsapp_bp = Blueprint('whatsapp', __name__)
@@ -11,37 +21,107 @@ health_bp = Blueprint('health', __name__)
 @whatsapp_bp.route('/webhook', methods=['GET', 'POST'])
 def webhook_meta():
     """WhatsApp Business API webhook (Meta)"""
-    controller = get_whatsapp_controller()
-    return controller.webhook_meta()
+    with get_db_context() as db:
+        user_repo = PostgresUserRepository(db)
+        conversation_repo = PostgresConversationRepository(db)
+        message_repo = PostgresMessageRepository(db)
+        metric_repo = MetricRepositoryImpl(db)
+        ai_service = VertexAIService()
+        
+        chat_service = ChatService(
+            user_repo=user_repo,
+            conversation_repo=conversation_repo,
+            message_repo=message_repo,
+            ai_service=ai_service,
+            metric_repo=metric_repo
+        )
+        controller = WhatsAppController(chat_service)
+        return controller.webhook_meta()
 
 
 @whatsapp_bp.route('/whatsapp/twilio', methods=['POST'])
 def webhook_twilio():
     """WhatsApp webhook via Twilio"""
-    controller = get_whatsapp_controller()
-    return controller.webhook_twilio()
+    with get_db_context() as db:
+        user_repo = PostgresUserRepository(db)
+        conversation_repo = PostgresConversationRepository(db)
+        message_repo = PostgresMessageRepository(db)
+        metric_repo = MetricRepositoryImpl(db)
+        ai_service = VertexAIService()
+        
+        chat_service = ChatService(
+            user_repo=user_repo,
+            conversation_repo=conversation_repo,
+            message_repo=message_repo,
+            ai_service=ai_service,
+            metric_repo=metric_repo
+        )
+        controller = WhatsAppController(chat_service)
+        return controller.webhook_twilio()
 
 
 # Voice routes
 @voice_bp.route('/voice/incoming', methods=['POST'])
 def voice_incoming():
     """Handle incoming voice calls"""
-    controller = get_voice_controller()
-    return controller.incoming()
+    with get_db_context() as db:
+        user_repo = PostgresUserRepository(db)
+        conversation_repo = PostgresConversationRepository(db)
+        message_repo = PostgresMessageRepository(db)
+        metric_repo = MetricRepositoryImpl(db)
+        ai_service = VertexAIService()
+        
+        chat_service = ChatService(
+            user_repo=user_repo,
+            conversation_repo=conversation_repo,
+            message_repo=message_repo,
+            ai_service=ai_service,
+            metric_repo=metric_repo
+        )
+        controller = VoiceController(chat_service)
+        return controller.incoming()
 
 
 @voice_bp.route('/voice/process', methods=['POST'])
 def voice_process():
     """Process speech input"""
-    controller = get_voice_controller()
-    return controller.process()
+    with get_db_context() as db:
+        user_repo = PostgresUserRepository(db)
+        conversation_repo = PostgresConversationRepository(db)
+        message_repo = PostgresMessageRepository(db)
+        metric_repo = MetricRepositoryImpl(db)
+        ai_service = VertexAIService()
+        
+        chat_service = ChatService(
+            user_repo=user_repo,
+            conversation_repo=conversation_repo,
+            message_repo=message_repo,
+            ai_service=ai_service,
+            metric_repo=metric_repo
+        )
+        controller = VoiceController(chat_service)
+        return controller.process()
 
 
 @voice_bp.route('/voice/status', methods=['POST'])
 def voice_status():
     """Handle call status callbacks"""
-    controller = get_voice_controller()
-    return controller.status()
+    with get_db_context() as db:
+        user_repo = PostgresUserRepository(db)
+        conversation_repo = PostgresConversationRepository(db)
+        message_repo = PostgresMessageRepository(db)
+        metric_repo = MetricRepositoryImpl(db)
+        ai_service = VertexAIService()
+        
+        chat_service = ChatService(
+            user_repo=user_repo,
+            conversation_repo=conversation_repo,
+            message_repo=message_repo,
+            ai_service=ai_service,
+            metric_repo=metric_repo
+        )
+        controller = VoiceController(chat_service)
+        return controller.status()
 
 
 # Health check route
