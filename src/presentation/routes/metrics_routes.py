@@ -1,8 +1,11 @@
 from flask import Blueprint, jsonify
 from src.infrastructure.database.connection import get_db_context
 from src.infrastructure.database.metric_repository_impl import MetricRepositoryImpl
+from src.infrastructure.repositories.postgres_report_request_repository import PostgresReportRequestRepository
 from src.application.services.metrics_service import MetricsService
+from src.application.services.report_request_service import ReportRequestService
 from src.presentation.controllers.metrics_controller import MetricsController
+from src.presentation.controllers.report_request_controller import ReportRequestController
 
 
 def create_metrics_blueprint() -> Blueprint:
@@ -17,6 +20,18 @@ def create_metrics_blueprint() -> Blueprint:
                 metric_repo = MetricRepositoryImpl(db)
                 metrics_service = MetricsService(metric_repo, db)
                 controller = MetricsController(metrics_service)
+                return getattr(controller, handler_method)(*args, **kwargs)
+        wrapper.__name__ = handler_method
+        return wrapper
+    
+    # Helper function for report request controller
+    def with_report_request_controller(handler_method):
+        """Decorator to provide report request controller with proper DB session management"""
+        def wrapper(*args, **kwargs):
+            with get_db_context() as db:
+                report_request_repo = PostgresReportRequestRepository(db)
+                report_request_service = ReportRequestService(report_request_repo)
+                controller = ReportRequestController(report_request_service)
                 return getattr(controller, handler_method)(*args, **kwargs)
         wrapper.__name__ = handler_method
         return wrapper
@@ -38,5 +53,10 @@ def create_metrics_blueprint() -> Blueprint:
     bp.route('/peak-hours', methods=['GET'])(with_metrics_controller('get_peak_interaction_hours'))
     bp.route('/frequent-questions', methods=['GET'])(with_metrics_controller('get_frequent_questions'))
     bp.route('/topic-clusters', methods=['GET'])(with_metrics_controller('get_topic_clusters'))
+    
+    # Report request endpoints
+    bp.route('/reports/request', methods=['POST'])(with_report_request_controller('create_report_request'))
+    bp.route('/reports/request/<request_id>', methods=['GET'])(with_report_request_controller('get_report_request'))
+    bp.route('/reports/requests', methods=['GET'])(with_report_request_controller('get_all_report_requests'))
     
     return bp

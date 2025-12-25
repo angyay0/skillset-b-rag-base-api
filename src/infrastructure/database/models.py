@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Text, JSON
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from src.infrastructure.database.connection import Base
@@ -72,3 +73,18 @@ class MetricModel(Base):
     # Relationships
     user = relationship("UserModel")
     conversation = relationship("ConversationModel")
+
+
+class ReportRequestModel(Base):
+    """Report request database model"""
+    __tablename__ = 'report_requests'
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid(), index=True)
+    agent_id = Column(String(100), nullable=False, index=True)
+    metrics = Column(JSON, nullable=False)
+    period_days = Column(Integer, nullable=False)
+    format = Column(String(20), nullable=False)
+    requested_for = Column(Text, nullable=True)
+    requested_by = Column(String(255), nullable=False, index=True)
+    status = Column(String(20), nullable=False, default='pending', index=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)

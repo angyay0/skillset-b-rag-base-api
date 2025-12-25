@@ -8,11 +8,12 @@ import os
 # Add parent directory to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+# Load environment variables BEFORE importing database modules
 from dotenv import load_dotenv
-from src.infrastructure.database.connection import init_db
+load_dotenv(override=True)
 
-# Load environment variables
-load_dotenv()
+# Now import database modules (they read DATABASE_URL at import time)
+from src.infrastructure.database.connection import init_db
 
 if __name__ == '__main__':
     print("Initializing database...")
