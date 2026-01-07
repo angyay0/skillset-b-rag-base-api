@@ -106,6 +106,7 @@ class ReportRequestService:
         return {
             'id': str(request.id) if request.id else None,
             'agent_id': request.agent_id,
+            'agent_name': request.agent.name if request.agent else None,
             'metrics': request.metrics,
             'period_days': request.period_days,
             'format': request.format,

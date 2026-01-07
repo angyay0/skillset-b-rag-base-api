@@ -1,8 +1,9 @@
 from typing import Optional, List
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from src.domain.entities.user import User
+from src.domain.entities.agent import Agent
 from src.domain.repositories.user_repository import UserRepository
-from src.infrastructure.database.models import UserModel
+from src.infrastructure.database.models import UserModel, AgentModel
 
 
 class PostgresUserRepository(UserRepository):
@@ -20,6 +21,9 @@ class PostgresUserRepository(UserRepository):
             validity_days=user.validity_days,
             is_active=user.is_active
         )
+        # Set agents relationship if provided
+        if user.agents:
+            db_user.agents = [self.db.query(AgentModel).get(agent.id) for agent in user.agents if agent.id]
         self.db.add(db_user)
         self.db.commit()
         self.db.refresh(db_user)
@@ -27,12 +31,12 @@ class PostgresUserRepository(UserRepository):
     
     def get_by_id(self, user_id: int) -> Optional[User]:
         """Get user by ID"""
-        db_user = self.db.query(UserModel).filter(UserModel.id == user_id).first()
+        db_user = self.db.query(UserModel).options(joinedload(UserModel.agents)).filter(UserModel.id == user_id).first()
         return self._to_entity(db_user) if db_user else None
-    
+
     def get_by_phone(self, phone_number: str) -> Optional[User]:
         """Get user by phone number"""
-        db_user = self.db.query(UserModel).filter(UserModel.phone_number == phone_number).first()
+        db_user = self.db.query(UserModel).options(joinedload(UserModel.agents)).filter(UserModel.phone_number == phone_number).first()
         return self._to_entity(db_user) if db_user else None
     
     def update(self, user: User) -> User:
@@ -40,13 +44,16 @@ class PostgresUserRepository(UserRepository):
         db_user = self.db.query(UserModel).filter(UserModel.id == user.id).first()
         if not db_user:
             raise ValueError(f"User with id {user.id} not found")
-        
+
         db_user.phone_number = user.phone_number
         db_user.name = user.name
         db_user.language = user.language
         db_user.validity_days = user.validity_days
         db_user.is_active = user.is_active
-        
+        # Update agents relationship
+        if user.agents:
+            db_user.agents = [self.db.query(AgentModel).get(agent.id) for agent in user.agents if agent.id]
+
         self.db.commit()
         self.db.refresh(db_user)
         return self._to_entity(db_user)
@@ -63,12 +70,12 @@ class PostgresUserRepository(UserRepository):
     
     def list_all(self, limit: int = 100, offset: int = 0) -> List[User]:
         """List all users"""
-        db_users = self.db.query(UserModel).offset(offset).limit(limit).all()
+        db_users = self.db.query(UserModel).options(joinedload(UserModel.agents)).offset(offset).limit(limit).all()
         return [self._to_entity(db_user) for db_user in db_users]
     
-    @staticmethod
-    def _to_entity(db_user: UserModel) -> User:
+    def _to_entity(self, db_user: UserModel) -> User:
         """Convert database model to entity"""
+        agents = [self._to_agent_entity(db_agent) for db_agent in db_user.agents] if db_user.agents else []
         return User(
             id=db_user.id,
             phone_number=db_user.phone_number,
@@ -77,5 +84,19 @@ class PostgresUserRepository(UserRepository):
             validity_days=db_user.validity_days,
             is_active=db_user.is_active,
             created_at=db_user.created_at,
-            updated_at=db_user.updated_at
+            updated_at=db_user.updated_at,
+            agents=agents
+        )
+
+    def _to_agent_entity(self, db_agent: AgentModel) -> Agent:
+        """Convert AgentModel to Agent entity"""
+        return Agent(
+            id=db_agent.id,
+            name=db_agent.name,
+            type=db_agent.type,
+            description=db_agent.description,
+            configuration=db_agent.configuration,
+            is_active=db_agent.is_active,
+            created_at=db_agent.created_at,
+            updated_at=db_agent.updated_at
         )

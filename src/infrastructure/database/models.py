@@ -1,14 +1,20 @@
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Text, JSON
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Text, JSON, Table
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from src.infrastructure.database.connection import Base
 
+# Association table for many-to-many relationship between users and agents
+user_agents = Table('user_agents', Base.metadata,
+    Column('user_id', Integer, ForeignKey('users.id'), primary_key=True),
+    Column('agent_id', Integer, ForeignKey('agents.id'), primary_key=True)
+)
+
 
 class UserModel(Base):
     """User database model"""
     __tablename__ = 'users'
-    
+
     id = Column(Integer, primary_key=True, index=True)
     phone_number = Column(String(20), unique=True, nullable=False, index=True)
     name = Column(String(100), nullable=True)
@@ -17,9 +23,10 @@ class UserModel(Base):
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
-    
+
     # Relationships
     conversations = relationship("ConversationModel", back_populates="user", cascade="all, delete-orphan")
+    agents = relationship("AgentModel", secondary=user_agents, back_populates="users")
 
 
 class ConversationModel(Base):
@@ -78,9 +85,9 @@ class MetricModel(Base):
 class ReportRequestModel(Base):
     """Report request database model"""
     __tablename__ = 'report_requests'
-    
+
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid(), index=True)
-    agent_id = Column(String(100), nullable=False, index=True)
+    agent_id = Column(Integer, ForeignKey('agents.id'), nullable=True, index=True)
     metrics = Column(JSON, nullable=False)
     period_days = Column(Integer, nullable=False)
     format = Column(String(20), nullable=False)
@@ -88,3 +95,23 @@ class ReportRequestModel(Base):
     requested_by = Column(String(255), nullable=False, index=True)
     status = Column(String(20), nullable=False, default='pending', index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
+
+    # Relationships
+    agent = relationship("AgentModel")
+
+
+class AgentModel(Base):
+    """Agent database model"""
+    __tablename__ = 'agents'
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False, unique=True, index=True)
+    type = Column(String(50), nullable=False)
+    description = Column(Text, nullable=True)
+    configuration = Column(JSON, nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    # Relationships
+    users = relationship("UserModel", secondary=user_agents, back_populates="agents")

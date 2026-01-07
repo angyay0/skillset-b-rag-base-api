@@ -19,12 +19,12 @@ from src.domain.entities.user import User
 load_dotenv()
 
 
-def add_user(phone_number: str, name: str = None, language: str = 'es', validity_days: int = 30):
+def add_user(phone_number: str, name: str = None, language: str = 'es', validity_days: int = 30, agent_id: int = None):
     """Add a new user to the database"""
-    
+
     with get_db_context() as db:
         user_repo = PostgresUserRepository(db)
-        
+
         # Check if user already exists
         existing_user = user_repo.get_by_phone(phone_number)
         if existing_user:
@@ -38,7 +38,7 @@ def add_user(phone_number: str, name: str = None, language: str = 'es', validity
             print(f"   Days remaining: {existing_user.days_remaining()}")
             print(f"   Is valid: {existing_user.is_valid()}")
             return False
-        
+
         # Create new user
         user = User(
             id=None,
@@ -48,21 +48,23 @@ def add_user(phone_number: str, name: str = None, language: str = 'es', validity
             validity_days=validity_days,
             is_active=True,
             created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
+            updated_at=datetime.utcnow(),
+            agent_id=agent_id
         )
-        
+
         created_user = user_repo.create(user)
-        
+
         print(f"✅ User created successfully!")
         print(f"   ID: {created_user.id}")
         print(f"   Phone: {created_user.phone_number}")
         print(f"   Name: {created_user.name or 'Not set'}")
         print(f"   Language: {created_user.language}")
         print(f"   Validity: {created_user.validity_days} days")
+        print(f"   Agent ID: {created_user.agent_id}")
         print(f"   Created: {created_user.created_at}")
         print(f"   Valid until: {created_user.expiration_date()}")
         print(f"   Days remaining: {created_user.days_remaining()}")
-        
+
         return True
 
 
@@ -141,6 +143,7 @@ def main():
     add_parser.add_argument('--name', help='User name', default=None)
     add_parser.add_argument('--language', help='Language (es, en, pt)', default='es')
     add_parser.add_argument('--validity', type=int, help='Validity period in days', default=30)
+    add_parser.add_argument('--agent-id', type=int, help='Agent ID to assign', default=None)
     
     # List users command
     list_parser = subparsers.add_parser('list', help='List all users')
@@ -157,7 +160,7 @@ def main():
     args = parser.parse_args()
     
     if args.command == 'add':
-        add_user(args.phone, args.name, args.language, args.validity)
+        add_user(args.phone, args.name, args.language, args.validity, args.agent_id)
     elif args.command == 'list':
         list_users()
     elif args.command == 'update':

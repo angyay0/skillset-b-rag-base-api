@@ -18,7 +18,7 @@ class ReportRequestRepository(ABC):
         pass
     
     @abstractmethod
-    def get_by_agent(self, agent_id: str, limit: int = 100) -> List[ReportRequest]:
+    def get_by_agent(self, agent_id: int, limit: int = 100) -> List[ReportRequest]:
         """Get report requests by agent ID"""
         pass
     
