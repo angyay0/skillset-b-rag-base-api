@@ -136,13 +136,19 @@ def register_routes(app):
     # Import here to avoid circular imports
     from src.presentation.routes.metrics_routes import create_metrics_blueprint
     from src.presentation.routes.dashboard_routes import create_dashboard_blueprint
-    
+    from src.presentation.routes.agent_routes import create_agent_blueprint
+    from src.presentation.routes.user_routes import create_user_blueprint
+
     app.register_blueprint(whatsapp_bp)
     app.register_blueprint(voice_bp)
     app.register_blueprint(health_bp)
-    
-    # Register metrics and dashboard blueprints
+
+    # Register metrics, dashboard, agent and user blueprints
     metrics_bp = create_metrics_blueprint()
     dashboard_bp = create_dashboard_blueprint()
+    agent_bp = create_agent_blueprint()
+    user_bp = create_user_blueprint()
     app.register_blueprint(metrics_bp)
     app.register_blueprint(dashboard_bp)
+    app.register_blueprint(agent_bp)
+    app.register_blueprint(user_bp)

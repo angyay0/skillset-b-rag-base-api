@@ -1,6 +1,9 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import Optional, List, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .agent import Agent
 
 
 @dataclass
@@ -14,6 +17,7 @@ class User:
     updated_at: datetime
     validity_days: int = 30
     is_active: bool = True
+    agents: List['Agent'] = field(default_factory=list)
     
     def __post_init__(self):
         if not self.phone_number:

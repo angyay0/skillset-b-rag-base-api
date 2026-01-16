@@ -69,15 +69,18 @@ class MetricsService:
         """
         start_date = datetime.utcnow() - timedelta(hours=hours)
         
+        # Create the date_trunc expression once to reuse in GROUP BY and ORDER BY
+        hour_bucket = func.date_trunc('hour', MessageModel.created_at).label('hour')
+        
         results = self.db.query(
-            func.date_trunc('hour', MessageModel.created_at).label('hour'),
+            hour_bucket,
             func.avg(MessageModel.response_time_ms).label('avg_ms'),
             func.count(MessageModel.id).label('count')
         )\
             .filter(MessageModel.response_time_ms.isnot(None))\
             .filter(MessageModel.created_at >= start_date)\
-            .group_by(func.date_trunc('hour', MessageModel.created_at))\
-            .order_by(func.date_trunc('hour', MessageModel.created_at))\
+            .group_by(hour_bucket)\
+            .order_by(hour_bucket)\
             .all()
         
         return [
@@ -178,13 +181,16 @@ class MetricsService:
         """
         start_date = datetime.utcnow() - timedelta(hours=hours)
         
+        # Create the date_trunc expression once to reuse in GROUP BY and ORDER BY
+        hour_bucket = func.date_trunc('hour', MessageModel.created_at).label('hour')
+        
         results = self.db.query(
-            func.date_trunc('hour', MessageModel.created_at).label('hour'),
+            hour_bucket,
             func.count(MessageModel.id).label('count')
         )\
             .filter(MessageModel.created_at >= start_date)\
-            .group_by(func.date_trunc('hour', MessageModel.created_at))\
-            .order_by(func.date_trunc('hour', MessageModel.created_at))\
+            .group_by(hour_bucket)\
+            .order_by(hour_bucket)\
             .all()
         
         return [

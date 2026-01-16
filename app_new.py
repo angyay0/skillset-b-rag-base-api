@@ -1,12 +1,13 @@
 import os
+from dotenv import load_dotenv
+
+# Load environment variables BEFORE importing database modules
+load_dotenv(override=True)
+
 from flask import Flask
 from flask_cors import CORS
-from dotenv import load_dotenv
 from src.infrastructure.database.connection import init_db
 from src.presentation.routes import register_routes
-
-# Load environment variables
-load_dotenv()
 
 # Create Flask app
 app = Flask(__name__)
