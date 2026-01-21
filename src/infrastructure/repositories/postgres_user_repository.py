@@ -19,7 +19,18 @@ class PostgresUserRepository(UserRepository):
             name=user.name,
             language=user.language,
             validity_days=user.validity_days,
-            is_active=user.is_active
+            is_active=user.is_active,
+            subscription_plan=user.subscription_plan,
+            subscription_start_date=user.subscription_start_date,
+            subscription_end_date=user.subscription_end_date,
+            max_messages_per_month=user.max_messages_per_month,
+            max_agents=user.max_agents,
+            email=user.email,
+            password_hash=user.password_hash,
+            company_name=user.company_name,
+            team_size=user.team_size,
+            industry=user.industry,
+            primary_use_case=user.primary_use_case
         )
         # Set agents relationship if provided
         if user.agents:
@@ -50,6 +61,17 @@ class PostgresUserRepository(UserRepository):
         db_user.language = user.language
         db_user.validity_days = user.validity_days
         db_user.is_active = user.is_active
+        db_user.subscription_plan = user.subscription_plan
+        db_user.subscription_start_date = user.subscription_start_date
+        db_user.subscription_end_date = user.subscription_end_date
+        db_user.max_messages_per_month = user.max_messages_per_month
+        db_user.max_agents = user.max_agents
+        db_user.email = user.email
+        db_user.password_hash = user.password_hash
+        db_user.company_name = user.company_name
+        db_user.team_size = user.team_size
+        db_user.industry = user.industry
+        db_user.primary_use_case = user.primary_use_case
         # Update agents relationship
         if user.agents:
             db_user.agents = [self.db.query(AgentModel).get(agent.id) for agent in user.agents if agent.id]
@@ -85,7 +107,18 @@ class PostgresUserRepository(UserRepository):
             is_active=db_user.is_active,
             created_at=db_user.created_at,
             updated_at=db_user.updated_at,
-            agents=agents
+            agents=agents,
+            subscription_plan=db_user.subscription_plan,
+            subscription_start_date=db_user.subscription_start_date,
+            subscription_end_date=db_user.subscription_end_date,
+            max_messages_per_month=db_user.max_messages_per_month,
+            max_agents=db_user.max_agents,
+            email=db_user.email,
+            password_hash=db_user.password_hash,
+            company_name=db_user.company_name,
+            team_size=db_user.team_size,
+            industry=db_user.industry,
+            primary_use_case=db_user.primary_use_case
         )
 
     def _to_agent_entity(self, db_agent: AgentModel) -> Agent:

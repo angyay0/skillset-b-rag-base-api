@@ -211,3 +211,48 @@ class UserController:
                 'error': 'Internal server error',
                 'message': 'An unexpected error occurred while processing your request'
             }), 500
+
+    def change_subscription_plan(self, user_id):
+        """Change a user's subscription plan (upgrade or downgrade)"""
+        try:
+            data = request.get_json()
+
+            if not data:
+                return jsonify({
+                    'error': 'Request body is required',
+                    'message': 'Please provide a valid JSON request body'
+                }), 400
+
+            if 'subscription_plan' not in data:
+                return jsonify({
+                    'error': 'Missing required field',
+                    'message': 'subscription_plan is required'
+                }), 400
+
+            new_plan = data['subscription_plan']
+            result = self.user_service.change_subscription_plan(int(user_id), new_plan)
+
+            return jsonify({
+                'message': 'Subscription plan updated successfully',
+                'data': result['user'],
+                'previous_plan': result['previous_plan'],
+                'new_plan': result['new_plan'],
+                'change_type': result['change_type']
+            }), 200
+
+        except ValueError as e:
+            error_message = str(e)
+            if 'not found' in error_message.lower():
+                return jsonify({
+                    'error': 'Not found',
+                    'message': error_message
+                }), 404
+            return jsonify({
+                'error': 'Validation error',
+                'message': error_message
+            }), 400
+        except Exception as e:
+            return jsonify({
+                'error': 'Internal server error',
+                'message': 'An unexpected error occurred while processing your request'
+            }), 500

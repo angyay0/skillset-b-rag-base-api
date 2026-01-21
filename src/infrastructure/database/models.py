@@ -21,6 +21,22 @@ class UserModel(Base):
     language = Column(String(10), default='es', nullable=False)
     validity_days = Column(Integer, default=30, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
+    
+    # Subscription plan fields
+    subscription_plan = Column(String(50), default='free', nullable=False)
+    subscription_start_date = Column(DateTime(timezone=True), nullable=True)
+    subscription_end_date = Column(DateTime(timezone=True), nullable=True)
+    max_messages_per_month = Column(Integer, default=100, nullable=False)
+    max_agents = Column(Integer, default=1, nullable=False)
+    
+    # Profile fields (from frontend form)
+    email = Column(String(255), unique=True, nullable=True, index=True)
+    password_hash = Column(String(255), nullable=True)
+    company_name = Column(String(200), nullable=True)
+    team_size = Column(String(50), nullable=True)
+    industry = Column(String(100), nullable=True)
+    primary_use_case = Column(String(200), nullable=True)
+    
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 

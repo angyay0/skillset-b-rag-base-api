@@ -29,5 +29,6 @@ def create_user_blueprint() -> Blueprint:
     bp.route('/phone/<phone_number>', methods=['GET'])(with_user_controller('get_user_by_phone'))
     bp.route('', methods=['GET'])(with_user_controller('list_users'))
     bp.route('/with-agents', methods=['GET'])(with_user_controller('list_users_with_agents'))
+    bp.route('/<int:user_id>/subscription', methods=['PUT'])(with_user_controller('change_subscription_plan'))
 
     return bp
