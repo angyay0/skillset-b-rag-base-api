@@ -138,17 +138,20 @@ def register_routes(app):
     from src.presentation.routes.dashboard_routes import create_dashboard_blueprint
     from src.presentation.routes.agent_routes import create_agent_blueprint
     from src.presentation.routes.user_routes import create_user_blueprint
+    from src.presentation.routes.conversation_routes import create_conversation_blueprint
 
     app.register_blueprint(whatsapp_bp)
     app.register_blueprint(voice_bp)
     app.register_blueprint(health_bp)
 
-    # Register metrics, dashboard, agent and user blueprints
+    # Register metrics, dashboard, agent, user and conversation blueprints
     metrics_bp = create_metrics_blueprint()
     dashboard_bp = create_dashboard_blueprint()
     agent_bp = create_agent_blueprint()
     user_bp = create_user_blueprint()
+    conversation_bp = create_conversation_blueprint()
     app.register_blueprint(metrics_bp)
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(agent_bp)
     app.register_blueprint(user_bp)
+    app.register_blueprint(conversation_bp)

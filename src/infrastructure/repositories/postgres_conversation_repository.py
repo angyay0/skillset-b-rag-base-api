@@ -1,8 +1,9 @@
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
+from datetime import datetime
 from sqlalchemy.orm import Session
 from src.domain.entities.conversation import Conversation, Message
 from src.domain.repositories.conversation_repository import ConversationRepository, MessageRepository
-from src.infrastructure.database.models import ConversationModel, MessageModel
+from src.infrastructure.database.models import ConversationModel, MessageModel, UserModel, user_agents
 
 
 class PostgresConversationRepository(ConversationRepository):
@@ -60,6 +61,58 @@ class PostgresConversationRepository(ConversationRepository):
         self.db.refresh(db_conversation)
         return self._to_entity(db_conversation)
     
+    def list_by_agent(
+        self,
+        agent_id: int,
+        limit: int = 20,
+        offset: int = 0
+    ) -> tuple[List[Dict[str, Any]], int]:
+        """
+        List all conversations from all users of an agent with pagination
+        
+        Args:
+            agent_id: Agent ID
+            limit: Maximum conversations to return
+            offset: Number of conversations to skip
+            
+        Returns:
+            Tuple of (conversations list with user info, total count)
+        """
+        # Build query with JOINs
+        # conversations -> users -> user_agents
+        query = self.db.query(
+            ConversationModel,
+            UserModel.name.label('user_name'),
+            UserModel.phone_number.label('user_phone')
+        ).join(
+            UserModel, ConversationModel.user_id == UserModel.id
+        ).join(
+            user_agents, UserModel.id == user_agents.c.user_id
+        ).filter(
+            user_agents.c.agent_id == agent_id
+        )
+        
+        # Get total count before pagination
+        total_count = query.count()
+        
+        # Apply ordering and pagination
+        query = query.order_by(ConversationModel.created_at.desc())
+        query = query.offset(offset).limit(limit)
+        
+        # Execute query
+        results = query.all()
+        
+        # Build enriched conversation data
+        conversations = []
+        for conv, user_name, user_phone in results:
+            conversations.append({
+                'conversation': self._to_entity(conv),
+                'user_name': user_name,
+                'user_phone': user_phone
+            })
+        
+        return conversations, total_count
+    
     @staticmethod
     def _to_entity(db_conversation: ConversationModel) -> Conversation:
         """Convert database model to entity"""
@@ -105,6 +158,58 @@ class PostgresMessageRepository(MessageRepository):
             MessageModel.conversation_id == conversation_id
         ).order_by(MessageModel.created_at.desc()).limit(limit).all()
         return [self._to_entity(msg) for msg in db_messages]
+    
+    def list_by_conversation_filtered(
+        self,
+        conversation_id: int,
+        limit: int = 50,
+        offset: int = 0,
+        order: str = 'desc',
+        from_date: Optional[datetime] = None,
+        to_date: Optional[datetime] = None
+    ) -> tuple[List[Message], int]:
+        """
+        List messages by conversation with advanced filtering
+        
+        Args:
+            conversation_id: Conversation ID
+            limit: Maximum messages to return
+            offset: Number of messages to skip
+            order: 'asc' for oldest first, 'desc' for newest first
+            from_date: Filter messages from this date (inclusive)
+            to_date: Filter messages until this date (inclusive)
+            
+        Returns:
+            Tuple of (messages list, total count)
+        """
+        # Build base query
+        query = self.db.query(MessageModel).filter(
+            MessageModel.conversation_id == conversation_id
+        )
+        
+        # Apply date filters
+        if from_date:
+            query = query.filter(MessageModel.created_at >= from_date)
+        if to_date:
+            query = query.filter(MessageModel.created_at <= to_date)
+        
+        # Get total count before pagination
+        total_count = query.count()
+        
+        # Apply ordering
+        if order == 'asc':
+            query = query.order_by(MessageModel.created_at.asc())
+        else:  # default to desc
+            query = query.order_by(MessageModel.created_at.desc())
+        
+        # Apply pagination
+        query = query.offset(offset).limit(limit)
+        
+        # Execute query
+        db_messages = query.all()
+        messages = [self._to_entity(msg) for msg in db_messages]
+        
+        return messages, total_count
     
     def get_conversation_history(self, conversation_id: int, limit: int = 10) -> List[Message]:
         """Get recent conversation history"""
