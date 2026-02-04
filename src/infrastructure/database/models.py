@@ -125,7 +125,12 @@ class AgentModel(Base):
     type = Column(String(50), nullable=False)
     description = Column(Text, nullable=True)
     configuration = Column(JSON, nullable=True)
-    is_active = Column(Boolean, default=True, nullable=False)
+    is_active = Column(Boolean, default=True, server_default='true', nullable=False)
+    auto_respond = Column(Boolean, default=True, server_default='true', nullable=False)
+    learning_mode = Column(Boolean, default=False, server_default='false', nullable=False)
+    response_temperature = Column(String(10), default='0.7', server_default='0.7', nullable=False)
+    max_response_tokens = Column(Integer, default=300, server_default='300', nullable=False)
+    system_prompt = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 

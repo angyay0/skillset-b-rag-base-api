@@ -29,20 +29,42 @@ class UserController:
                     'missing_fields': missing_fields
                 }), 400
 
-            # Handle agent_ids if provided as agent_id array
-            if 'agent_id' in data and isinstance(data['agent_id'], list):
-                data['agent_ids'] = data['agent_id']
-                del data['agent_id']
+            # Handle agent_id - support both single value and array
+            agent_id = data.get('agent_id') or data.get('agentId')
+            if agent_id:
+                if isinstance(agent_id, list):
+                    data['agent_ids'] = agent_id
+                else:
+                    data['agent_ids'] = [agent_id]
+                data.pop('agent_id', None)
+                data.pop('agentId', None)
 
-            # Create user
+            # Apply defaults for language and validity_days
+            if 'language' not in data and 'language' not in data:
+                data['language'] = 'es'
+            if 'validity_days' not in data and 'validityDays' not in data:
+                data['validity_days'] = 30
+            elif 'validityDays' in data:
+                data['validity_days'] = data.pop('validityDays')
+
+            # Check if user exists to determine response message
+            existing_user = self.user_service.get_user_by_phone(data.get('phone_number'))
+            
+            # Create user (or assign to agent if exists)
             user = self.user_service.create_user(data)
 
             response_data = self.user_service._to_response_dict(user)
 
-            return jsonify({
-                'message': 'User created successfully',
-                'data': response_data
-            }), 201
+            if existing_user:
+                return jsonify({
+                    'message': 'User already exists, assigned to agent',
+                    'data': response_data
+                }), 200
+            else:
+                return jsonify({
+                    'message': 'User created successfully',
+                    'data': response_data
+                }), 201
 
         except ValueError as e:
             return jsonify({

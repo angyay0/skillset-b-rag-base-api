@@ -12,7 +12,7 @@ class UserService:
         self.user_repo = user_repo
 
     def create_user(self, user_data: Dict[str, Any]) -> User:
-        """Create a new user with validation"""
+        """Create a new user with validation. If user exists, assign to agent instead."""
 
         # Validations
         if not user_data.get('phone_number'):
@@ -21,7 +21,8 @@ class UserService:
         # Check if user exists
         existing = self.user_repo.get_by_phone(user_data['phone_number'])
         if existing:
-            raise ValueError(f"User with phone number {user_data['phone_number']} already exists")
+            # User exists - assign to agent(s) if provided and update language/validity
+            return self._assign_existing_user_to_agents(existing, user_data)
 
         # Get agents if provided
         agents = []
@@ -167,6 +168,38 @@ class UserService:
             {'name': name, **details}
             for name, details in PLAN_TIERS.items()
         ]
+
+    def _assign_existing_user_to_agents(self, existing_user: User, user_data: Dict[str, Any]) -> User:
+        """Assign existing user to agents and optionally update language/validity"""
+        from src.infrastructure.repositories.postgres_agent_repository import PostgresAgentRepository
+        from src.infrastructure.database.connection import get_db_context
+        
+        updated = False
+        
+        # Update language if provided
+        if 'language' in user_data:
+            existing_user.language = user_data['language']
+            updated = True
+        
+        # Update validity_days if provided
+        if 'validity_days' in user_data:
+            existing_user.validity_days = user_data['validity_days']
+            updated = True
+        
+        # Update user if language or validity changed
+        if updated:
+            existing_user.updated_at = datetime.now(timezone.utc)
+            self.user_repo.update(existing_user)
+        
+        # Assign to agents if provided
+        if 'agent_ids' in user_data and user_data['agent_ids']:
+            with get_db_context() as db:
+                agent_repo = PostgresAgentRepository(db)
+                for agent_id in user_data['agent_ids']:
+                    agent_repo.add_user_to_agent(agent_id, existing_user.id)
+        
+        # Refresh user to get updated agents list
+        return self.user_repo.get_by_id(existing_user.id)
 
     def _to_response_dict(self, user: User) -> Dict[str, Any]:
         """Convert user entity to response dictionary"""

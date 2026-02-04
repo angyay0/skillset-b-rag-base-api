@@ -48,8 +48,7 @@ def add_user(phone_number: str, name: str = None, language: str = 'es', validity
             validity_days=validity_days,
             is_active=True,
             created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
-            agent_id=agent_id
+            updated_at=datetime.utcnow()
         )
 
         created_user = user_repo.create(user)
@@ -60,10 +59,17 @@ def add_user(phone_number: str, name: str = None, language: str = 'es', validity
         print(f"   Name: {created_user.name or 'Not set'}")
         print(f"   Language: {created_user.language}")
         print(f"   Validity: {created_user.validity_days} days")
-        print(f"   Agent ID: {created_user.agent_id}")
         print(f"   Created: {created_user.created_at}")
         print(f"   Valid until: {created_user.expiration_date()}")
         print(f"   Days remaining: {created_user.days_remaining()}")
+        
+        # Assign agent if provided
+        if agent_id:
+            success = user_repo.add_agent_to_user(created_user.id, agent_id)
+            if success:
+                print(f"   Agent ID: {agent_id} ✓ assigned")
+            else:
+                print(f"   Agent ID: {agent_id} ✗ failed (agent may not exist)")
 
         return True
 
@@ -133,6 +139,35 @@ def deactivate_user(phone_number: str):
         return True
 
 
+def assign_agent(phone_number: str, agent_id: int):
+    """Assign an agent to an existing user"""
+    
+    with get_db_context() as db:
+        user_repo = PostgresUserRepository(db)
+        
+        user = user_repo.get_by_phone(phone_number)
+        if not user:
+            print(f"❌ User with phone number {phone_number} not found!")
+            return False
+        
+        # Check if already assigned
+        existing_agent_ids = [a.id for a in user.agents]
+        if agent_id in existing_agent_ids:
+            print(f"ℹ️  User already assigned to agent {agent_id}")
+            return True
+        
+        success = user_repo.add_agent_to_user(user.id, agent_id)
+        
+        if success:
+            print(f"✅ Agent assigned successfully!")
+            print(f"   User: {user.name or user.phone_number}")
+            print(f"   Agent ID: {agent_id}")
+        else:
+            print(f"❌ Failed to assign agent (agent ID {agent_id} may not exist)")
+        
+        return success
+
+
 def main():
     parser = argparse.ArgumentParser(description='Manage users in the database')
     subparsers = parser.add_subparsers(dest='command', help='Commands')
@@ -157,6 +192,11 @@ def main():
     deactivate_parser = subparsers.add_parser('deactivate', help='Deactivate a user')
     deactivate_parser.add_argument('phone', help='Phone number')
     
+    # Assign agent command
+    assign_parser = subparsers.add_parser('assign-agent', help='Assign an agent to an existing user')
+    assign_parser.add_argument('phone', help='Phone number')
+    assign_parser.add_argument('agent_id', type=int, help='Agent ID to assign')
+    
     args = parser.parse_args()
     
     if args.command == 'add':
@@ -167,6 +207,8 @@ def main():
         update_user_validity(args.phone, args.validity)
     elif args.command == 'deactivate':
         deactivate_user(args.phone)
+    elif args.command == 'assign-agent':
+        assign_agent(args.phone, args.agent_id)
     else:
         parser.print_help()
 

@@ -47,6 +47,7 @@ COPY --chown=appuser:appuser dashboard ./dashboard
 COPY --chown=appuser:appuser app_new.py .
 COPY --chown=appuser:appuser alembic.ini .
 COPY --chown=appuser:appuser .env* ./
+COPY --chown=appuser:appuser key.json ./
 
 # Switch to non-root user
 USER appuser

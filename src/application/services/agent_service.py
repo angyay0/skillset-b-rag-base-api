@@ -29,6 +29,11 @@ class AgentService:
             description=agent_data.get('description'),
             configuration=agent_data.get('configuration'),
             is_active=agent_data.get('is_active', True),
+            auto_respond=agent_data.get('auto_respond', True),
+            learning_mode=agent_data.get('learning_mode', False),
+            response_temperature=agent_data.get('response_temperature', 0.7),
+            max_response_tokens=agent_data.get('max_response_tokens', 300),
+            system_prompt=agent_data.get('system_prompt'),
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow()
         )
@@ -83,6 +88,11 @@ class AgentService:
             description=agent_data.get('description', existing.description),
             configuration=agent_data.get('configuration', existing.configuration),
             is_active=agent_data.get('is_active', existing.is_active),
+            auto_respond=agent_data.get('auto_respond', existing.auto_respond),
+            learning_mode=agent_data.get('learning_mode', existing.learning_mode),
+            response_temperature=agent_data.get('response_temperature', existing.response_temperature),
+            max_response_tokens=agent_data.get('max_response_tokens', existing.max_response_tokens),
+            system_prompt=agent_data.get('system_prompt', existing.system_prompt),
             created_at=existing.created_at,
             updated_at=datetime.utcnow()
         )
@@ -96,6 +106,38 @@ class AgentService:
             raise ValueError(f"Agent with ID {agent_id} not found")
 
         return self.agent_repo.delete(agent_id)
+
+    def get_agent_users(self, agent_id: int) -> List[Dict[str, Any]]:
+        """Get all users assigned to an agent"""
+        existing = self.agent_repo.get_by_id(agent_id)
+        if not existing:
+            raise ValueError(f"Agent with ID {agent_id} not found")
+        
+        return self.agent_repo.get_users_by_agent(agent_id)
+
+    def add_users_to_agent(self, agent_id: int, users_data: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Add users to an agent with optional language/validity updates"""
+        existing = self.agent_repo.get_by_id(agent_id)
+        if not existing:
+            raise ValueError(f"Agent with ID {agent_id} not found")
+        
+        return self.agent_repo.add_users_to_agent(agent_id, users_data)
+
+    def update_agent_users(self, agent_id: int, users_data: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Update language/validity for users assigned to an agent"""
+        existing = self.agent_repo.get_by_id(agent_id)
+        if not existing:
+            raise ValueError(f"Agent with ID {agent_id} not found")
+        
+        return self.agent_repo.update_agent_users(agent_id, users_data)
+
+    def remove_users_from_agent(self, agent_id: int, user_ids: List[int]) -> Dict[str, Any]:
+        """Remove users from an agent"""
+        existing = self.agent_repo.get_by_id(agent_id)
+        if not existing:
+            raise ValueError(f"Agent with ID {agent_id} not found")
+        
+        return self.agent_repo.remove_users_from_agent(agent_id, user_ids)
 
     def _validate_agent_data(self, agent_data: Dict[str, Any]) -> None:
         """Validate agent data"""
@@ -119,6 +161,11 @@ class AgentService:
             'description': agent.description,
             'configuration': agent.configuration,
             'is_active': agent.is_active,
+            'auto_respond': agent.auto_respond,
+            'learning_mode': agent.learning_mode,
+            'response_temperature': agent.response_temperature,
+            'max_response_tokens': agent.max_response_tokens,
+            'system_prompt': agent.system_prompt,
             'created_at': agent.created_at.isoformat() if agent.created_at else None,
             'updated_at': agent.updated_at.isoformat() if agent.updated_at else None
         }

@@ -90,6 +90,23 @@ class PostgresUserRepository(UserRepository):
         self.db.commit()
         return True
     
+    def add_agent_to_user(self, user_id: int, agent_id: int) -> bool:
+        """Add an agent to a user (creates entry in user_agents table)"""
+        db_user = self.db.query(UserModel).filter(UserModel.id == user_id).first()
+        if not db_user:
+            return False
+        
+        db_agent = self.db.query(AgentModel).filter(AgentModel.id == agent_id).first()
+        if not db_agent:
+            return False
+        
+        # Check if relationship already exists
+        if db_agent not in db_user.agents:
+            db_user.agents.append(db_agent)
+            self.db.commit()
+        
+        return True
+    
     def list_all(self, limit: int = 100, offset: int = 0) -> List[User]:
         """List all users"""
         db_users = self.db.query(UserModel).options(joinedload(UserModel.agents)).offset(offset).limit(limit).all()

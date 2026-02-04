@@ -66,5 +66,11 @@ def create_agent_blueprint() -> Blueprint:
     bp.route('/<int:agent_id>/conversations', methods=['GET'])(
         with_conversation_controller('get_agent_conversations')
     )
+    
+    # User-Agent management routes
+    bp.route('/<int:agent_id>/users', methods=['GET'])(with_agent_controller('get_agent_users'))
+    bp.route('/<int:agent_id>/users', methods=['POST'])(with_agent_controller('add_users_to_agent'))
+    bp.route('/<int:agent_id>/users', methods=['PUT'])(with_agent_controller('update_agent_users'))
+    bp.route('/<int:agent_id>/users', methods=['DELETE'])(with_agent_controller('remove_users_from_agent'))
 
     return bp

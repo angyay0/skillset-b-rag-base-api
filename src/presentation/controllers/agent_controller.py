@@ -8,6 +8,22 @@ class AgentController:
     def __init__(self, agent_service: AgentService):
         self.agent_service = agent_service
 
+    def _normalize_input(self, data: dict) -> dict:
+        """Normalize camelCase input to snake_case"""
+        field_mapping = {
+            'isActive': 'is_active',
+            'autoRespond': 'auto_respond',
+            'learningMode': 'learning_mode',
+            'responseTemperature': 'response_temperature',
+            'maxResponseTokens': 'max_response_tokens',
+            'systemPrompt': 'system_prompt'
+        }
+        normalized = {}
+        for key, value in data.items():
+            normalized_key = field_mapping.get(key, key)
+            normalized[normalized_key] = value
+        return normalized
+
     def create_agent(self):
         """Create a new agent"""
         try:
@@ -29,8 +45,11 @@ class AgentController:
                     'missing_fields': missing_fields
                 }), 400
 
+            # Normalize input data
+            normalized_data = self._normalize_input(data)
+
             # Create the agent
-            agent = self.agent_service.create_agent(data)
+            agent = self.agent_service.create_agent(normalized_data)
 
             # Respond with 201 and the created agent data
             response_data = self.agent_service._to_response_dict(agent)
@@ -162,8 +181,11 @@ class AgentController:
                     'message': 'Please provide a valid JSON request body'
                 }), 400
 
+            # Normalize input data (camelCase to snake_case)
+            normalized_data = self._normalize_input(data)
+
             # Update the agent
-            success = self.agent_service.update_agent(int(agent_id), data)
+            success = self.agent_service.update_agent(int(agent_id), normalized_data)
 
             if not success:
                 return jsonify({
@@ -203,6 +225,173 @@ class AgentController:
 
             return jsonify({
                 'message': 'Agent deleted successfully'
+            }), 200
+
+        except ValueError as e:
+            return jsonify({
+                'error': 'Validation error',
+                'message': str(e)
+            }), 400
+        except Exception as e:
+            return jsonify({
+                'error': 'Internal server error',
+                'message': 'An unexpected error occurred while processing your request'
+            }), 500
+
+    def get_agent_users(self, agent_id):
+        """Get all users assigned to an agent"""
+        try:
+            users = self.agent_service.get_agent_users(int(agent_id))
+
+            return jsonify({
+                'message': 'Agent users retrieved successfully',
+                'data': users,
+                'count': len(users)
+            }), 200
+
+        except ValueError as e:
+            return jsonify({
+                'error': 'Not found',
+                'message': str(e)
+            }), 404
+        except Exception as e:
+            return jsonify({
+                'error': 'Internal server error',
+                'message': 'An unexpected error occurred while processing your request'
+            }), 500
+
+    def add_users_to_agent(self, agent_id):
+        """Add users to an agent with optional language/validity_days"""
+        try:
+            data = request.get_json()
+
+            if not data:
+                return jsonify({
+                    'error': 'Request body is required',
+                    'message': 'Please provide a valid JSON request body'
+                }), 400
+
+            # Support both 'users' array format and legacy 'user_ids' format
+            users = data.get('users') or []
+            user_ids = data.get('user_ids') or data.get('userIds', [])
+            
+            # Build users_data list
+            users_data = []
+            
+            if users and isinstance(users, list):
+                # New format: array of user objects with user_id, language, validity_days
+                for user in users:
+                    user_id = user.get('user_id') or user.get('userId')
+                    if user_id:
+                        users_data.append({
+                            'user_id': user_id,
+                            'language': user.get('language'),
+                            'validity_days': user.get('validity_days') or user.get('validityDays')
+                        })
+            elif user_ids and isinstance(user_ids, list):
+                # Legacy format: just array of user IDs
+                users_data = [{'user_id': uid} for uid in user_ids]
+            
+            if not users_data:
+                return jsonify({
+                    'error': 'Invalid request',
+                    'message': 'users array or user_ids must be provided'
+                }), 400
+
+            result = self.agent_service.add_users_to_agent(int(agent_id), users_data)
+
+            return jsonify({
+                'message': 'Users added to agent',
+                'data': result
+            }), 200
+
+        except ValueError as e:
+            return jsonify({
+                'error': 'Validation error',
+                'message': str(e)
+            }), 400
+        except Exception as e:
+            return jsonify({
+                'error': 'Internal server error',
+                'message': 'An unexpected error occurred while processing your request'
+            }), 500
+
+    def update_agent_users(self, agent_id):
+        """Update language/validity for users assigned to an agent"""
+        try:
+            data = request.get_json()
+
+            if not data:
+                return jsonify({
+                    'error': 'Request body is required',
+                    'message': 'Please provide a valid JSON request body'
+                }), 400
+
+            users = data.get('users') or []
+            if not users or not isinstance(users, list):
+                return jsonify({
+                    'error': 'Invalid request',
+                    'message': 'users array must be provided'
+                }), 400
+
+            # Build users_data list
+            users_data = []
+            for user in users:
+                user_id = user.get('user_id') or user.get('userId')
+                if user_id:
+                    users_data.append({
+                        'user_id': user_id,
+                        'language': user.get('language'),
+                        'validity_days': user.get('validity_days') or user.get('validityDays')
+                    })
+
+            if not users_data:
+                return jsonify({
+                    'error': 'Invalid request',
+                    'message': 'users array must contain valid user objects with user_id'
+                }), 400
+
+            result = self.agent_service.update_agent_users(int(agent_id), users_data)
+
+            return jsonify({
+                'message': 'Agent users updated',
+                'data': result
+            }), 200
+
+        except ValueError as e:
+            return jsonify({
+                'error': 'Validation error',
+                'message': str(e)
+            }), 400
+        except Exception as e:
+            return jsonify({
+                'error': 'Internal server error',
+                'message': 'An unexpected error occurred while processing your request'
+            }), 500
+
+    def remove_users_from_agent(self, agent_id):
+        """Remove users from an agent"""
+        try:
+            data = request.get_json()
+
+            if not data:
+                return jsonify({
+                    'error': 'Request body is required',
+                    'message': 'Please provide a valid JSON request body'
+                }), 400
+
+            user_ids = data.get('user_ids') or data.get('userIds', [])
+            if not user_ids or not isinstance(user_ids, list):
+                return jsonify({
+                    'error': 'Invalid request',
+                    'message': 'user_ids must be a non-empty array'
+                }), 400
+
+            result = self.agent_service.remove_users_from_agent(int(agent_id), user_ids)
+
+            return jsonify({
+                'message': 'Users removed from agent',
+                'data': result
             }), 200
 
         except ValueError as e:
