@@ -201,6 +201,158 @@ class MetricsService:
             for result in results
         ]
     
+    def get_dashboard_home_metrics(self) -> Dict:
+        """Get dashboard home metrics with month-over-month comparison
+        
+        Returns:
+            dict with total_messages, active_users, response_rate, satisfaction
+            each with current value, change percentage, and change direction
+        """
+        now = datetime.utcnow()
+        
+        # Current month period
+        current_month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        
+        # Last month period
+        last_month_end = current_month_start - timedelta(seconds=1)
+        last_month_start = last_month_end.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        
+        # --- Total Messages ---
+        current_messages = self.db.query(func.count(MessageModel.id))\
+            .filter(MessageModel.created_at >= current_month_start)\
+            .scalar() or 0
+        
+        last_month_messages = self.db.query(func.count(MessageModel.id))\
+            .filter(MessageModel.created_at >= last_month_start)\
+            .filter(MessageModel.created_at < current_month_start)\
+            .scalar() or 0
+        
+        messages_change = self._calculate_percentage_change(last_month_messages, current_messages)
+        
+        # --- Active Users (users who sent at least one message) ---
+        current_active_users = self.db.query(func.count(func.distinct(ConversationModel.user_id)))\
+            .join(MessageModel, MessageModel.conversation_id == ConversationModel.id)\
+            .filter(MessageModel.created_at >= current_month_start)\
+            .scalar() or 0
+        
+        last_month_active_users = self.db.query(func.count(func.distinct(ConversationModel.user_id)))\
+            .join(MessageModel, MessageModel.conversation_id == ConversationModel.id)\
+            .filter(MessageModel.created_at >= last_month_start)\
+            .filter(MessageModel.created_at < current_month_start)\
+            .scalar() or 0
+        
+        users_change = self._calculate_percentage_change(last_month_active_users, current_active_users)
+        
+        # --- Response Rate (messages with assistant_response / total messages) ---
+        current_total = self.db.query(func.count(MessageModel.id))\
+            .filter(MessageModel.created_at >= current_month_start)\
+            .scalar() or 0
+        
+        current_with_response = self.db.query(func.count(MessageModel.id))\
+            .filter(MessageModel.created_at >= current_month_start)\
+            .filter(MessageModel.assistant_response.isnot(None))\
+            .filter(MessageModel.assistant_response != '')\
+            .scalar() or 0
+        
+        current_response_rate = (current_with_response / current_total * 100) if current_total > 0 else 0
+        
+        last_total = self.db.query(func.count(MessageModel.id))\
+            .filter(MessageModel.created_at >= last_month_start)\
+            .filter(MessageModel.created_at < current_month_start)\
+            .scalar() or 0
+        
+        last_with_response = self.db.query(func.count(MessageModel.id))\
+            .filter(MessageModel.created_at >= last_month_start)\
+            .filter(MessageModel.created_at < current_month_start)\
+            .filter(MessageModel.assistant_response.isnot(None))\
+            .filter(MessageModel.assistant_response != '')\
+            .scalar() or 0
+        
+        last_response_rate = (last_with_response / last_total * 100) if last_total > 0 else 0
+        response_rate_change = round(current_response_rate - last_response_rate, 1)
+        
+        # --- Satisfaction (based on avg response time - faster = better, scale 1-5) ---
+        # Calculate satisfaction score: responses under 2s = 5, under 5s = 4, under 10s = 3, under 20s = 2, else = 1
+        current_avg_response_time = self.db.query(func.avg(MessageModel.response_time_ms))\
+            .filter(MessageModel.created_at >= current_month_start)\
+            .filter(MessageModel.response_time_ms.isnot(None))\
+            .scalar() or 0
+        
+        last_avg_response_time = self.db.query(func.avg(MessageModel.response_time_ms))\
+            .filter(MessageModel.created_at >= last_month_start)\
+            .filter(MessageModel.created_at < current_month_start)\
+            .filter(MessageModel.response_time_ms.isnot(None))\
+            .scalar() or 0
+        
+        current_satisfaction = self._response_time_to_satisfaction(current_avg_response_time)
+        last_satisfaction = self._response_time_to_satisfaction(last_avg_response_time)
+        satisfaction_change = round(current_satisfaction - last_satisfaction, 1)
+        
+        return {
+            'total_messages': {
+                'value': current_messages,
+                'formatted_value': self._format_number(current_messages),
+                'change': messages_change,
+                'change_label': f"{'+' if messages_change >= 0 else ''}{messages_change}%",
+                'period': 'from last month'
+            },
+            'active_users': {
+                'value': current_active_users,
+                'formatted_value': self._format_number(current_active_users),
+                'change': users_change,
+                'change_label': f"{'+' if users_change >= 0 else ''}{users_change}%",
+                'period': 'from last month'
+            },
+            'response_rate': {
+                'value': round(current_response_rate, 1),
+                'formatted_value': f"{round(current_response_rate, 1)}%",
+                'change': response_rate_change,
+                'change_label': f"{'+' if response_rate_change >= 0 else ''}{response_rate_change}%",
+                'period': 'from last month'
+            },
+            'satisfaction': {
+                'value': current_satisfaction,
+                'formatted_value': f"{current_satisfaction}/5",
+                'change': satisfaction_change,
+                'change_label': f"{'+' if satisfaction_change >= 0 else ''}{satisfaction_change}",
+                'period': 'from last month'
+            },
+            'period': {
+                'current_month_start': current_month_start.isoformat(),
+                'last_month_start': last_month_start.isoformat(),
+                'last_month_end': last_month_end.isoformat()
+            }
+        }
+    
+    def _calculate_percentage_change(self, old_value: float, new_value: float) -> float:
+        """Calculate percentage change between two values"""
+        if old_value == 0:
+            return 100.0 if new_value > 0 else 0.0
+        return round(((new_value - old_value) / old_value) * 100, 1)
+    
+    def _response_time_to_satisfaction(self, avg_response_time_ms: float) -> float:
+        """Convert average response time to a satisfaction score (1-5)"""
+        if avg_response_time_ms == 0:
+            return 5.0
+        elif avg_response_time_ms < 2000:  # Under 2 seconds
+            return 5.0
+        elif avg_response_time_ms < 5000:  # Under 5 seconds
+            return 4.5
+        elif avg_response_time_ms < 10000:  # Under 10 seconds
+            return 4.0
+        elif avg_response_time_ms < 15000:  # Under 15 seconds
+            return 3.5
+        elif avg_response_time_ms < 20000:  # Under 20 seconds
+            return 3.0
+        elif avg_response_time_ms < 30000:  # Under 30 seconds
+            return 2.5
+        else:
+            return 2.0
+    
+    def _format_number(self, num: int) -> str:
+        """Format number with thousand separators"""
+        return f"{num:,}"
+    
     def get_dashboard_summary(self) -> Dict:
         """Get comprehensive dashboard summary
         

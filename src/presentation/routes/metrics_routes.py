@@ -37,6 +37,7 @@ def create_metrics_blueprint() -> Blueprint:
         return wrapper
     
     # Register routes with session management
+    bp.route('/dashboard-home', methods=['GET'])(with_metrics_controller('get_dashboard_home_metrics'))
     bp.route('/dashboard', methods=['GET'])(with_metrics_controller('get_dashboard_summary'))
     bp.route('/response-time', methods=['GET'])(with_metrics_controller('get_response_time_stats'))
     bp.route('/response-time/hourly', methods=['GET'])(with_metrics_controller('get_response_time_by_hour'))

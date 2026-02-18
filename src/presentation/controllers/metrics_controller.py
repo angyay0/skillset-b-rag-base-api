@@ -9,6 +9,21 @@ class MetricsController:
     def __init__(self, metrics_service: MetricsService):
         self.metrics_service = metrics_service
     
+    def get_dashboard_home_metrics(self):
+        """Get dashboard home metrics with month-over-month comparison
+        
+        GET /api/metrics/dashboard-home
+        
+        Returns:
+            JSON with total_messages, active_users, response_rate, satisfaction
+            each with current value, change percentage, and change label
+        """
+        try:
+            metrics = self.metrics_service.get_dashboard_home_metrics()
+            return jsonify(metrics), 200
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+    
     def get_dashboard_summary(self):
         """Get comprehensive dashboard summary
         
